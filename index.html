@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UFO Bike Shop | Store</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Exo+2:wght@300;600&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <style>
+        :root { --cyan: #00e5ff; --black: #0a0a0f; --card: #16161f; --border: rgba(0,229,255,0.2); }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: var(--black); color: #e8e8f0; font-family: 'Exo 2', sans-serif; }
+        
+        /* Cursor Neón */
+        #cursor { width: 20px; height: 20px; border: 2px solid var(--cyan); border-radius: 50%; position: fixed; pointer-events: none; z-index: 9999; transform: translate(-50%,-50%); box-shadow: 0 0 10px var(--cyan); }
+
+        nav { position: fixed; top: 0; width: 100%; z-index: 1000; background: rgba(10,10,15,0.9); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; padding: 20px 5%; align-items: center; }
+        .nav-logo { font-family: 'Orbitron'; color: var(--cyan); text-decoration: none; font-weight: 900; letter-spacing: 2px; }
+        .nav-links a { color: #888; text-decoration: none; font-family: 'Orbitron'; font-size: 0.7rem; margin-left: 20px; }
+        .nav-links a.active { color: var(--cyan); }
+
+        .page { display: none; padding: 120px 5% 50px; min-height: 100vh; }
+        .page.active { display: block; }
+
+        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; margin-top: 30px; }
+        .card { background: var(--card); border: 1px solid var(--border); padding: 20px; border-radius: 10px; text-align: center; }
+        .card h3 { font-family: 'Orbitron'; font-size: 0.9rem; margin-bottom: 10px; }
+        .price { color: var(--cyan); font-weight: bold; font-size: 1.2rem; display: block; margin-bottom: 15px; }
+        .btn { width: 100%; background: var(--cyan); color: black; border: none; padding: 10px; font-family: 'Orbitron'; font-weight: bold; cursor: pointer; border-radius: 4px; }
+
+        .admin-flex { display: flex; gap: 30px; flex-wrap: wrap; }
+        .form-box { background: var(--card); padding: 20px; border-radius: 10px; border: 1px solid var(--border); flex: 1; min-width: 300px; }
+        input { width: 100%; padding: 10px; margin: 10px 0; background: #000; border: 1px solid var(--border); color: white; border-radius: 4px; }
+        
+        footer { text-align: center; padding: 40px; border-top: 1px solid var(--border); margin-top: 50px; color: #555; font-size: 0.8rem; }
+    </style>
+</head>
+<body>
+
+    <div id="cursor"></div>
+
+    <nav>
+        <a href="#" class="nav-logo" onclick="showPage('home')">UFO BIKESHOP</a>
+        <div class="nav-links">
+            <a href="#" id="l-home" class="active" onclick="showPage('home')">Tienda</a>
+            <a href="#" id="l-admin" onclick="showPage('admin')">Admin</a>
+        </div>
+    </nav>
+
+    <section id="home" class="page active">
+        <h1 style="font-family: 'Orbitron'; text-align: center; letter-spacing: 5px;">CATÁLOGO <span style="color: var(--cyan);">INTERGALÁCTICO</span></h1>
+        <div id="grid-tienda" class="product-grid">
+            <p style="text-align: center; width: 100%;">Cargando sistemas de la nave...</p>
+        </div>
+    </section>
+
+    <section id="admin" class="page">
+        <div class="admin-flex">
+            <div class="form-box">
+                <h2 style="font-family: 'Orbitron'; font-size: 1rem; color: var(--cyan);">NUEVO PRODUCTO</h2>
+                <input type="text" id="name" placeholder="Nombre (ej. Venzo Skyline)">
+                <input type="number" id="price" placeholder="Precio ARS">
+                <input type="number" id="stock" placeholder="Stock">
+                <button class="btn" onclick="subirProducto()">CARGAR EN BASE DE DATOS</button>
+                <button onclick="logout()" style="background:none; border:none; color:red; margin-top:20px; cursor:pointer; font-size:0.7rem;">CERRAR SESIÓN</button>
+            </div>
+            <div id="lista-admin" style="flex: 2;">
+                <h2 style="font-family: 'Orbitron'; font-size: 1rem;">INVENTARIO</h2>
+                <div id="inv-items"></div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        👽 UFO BIKE SHOP · Tucumán, Argentina · 2026<br>
+        <small>Sistema de Seguridad Firebase Activo 🔒</small>
+    </footer>
+
+    <script>
+        // 1. CONFIGURACIÓN (Asegurada)
+        const firebaseConfig = {
+            apiKey: "AIzaSyAjhXwzb8Et49_vy2Mz-mRT2a_h83HFHvQ",
+            authDomain: "ufobikeshop.firebaseapp.com",
+            databaseURL: "https://ufobikeshop-default-rtdb.firebaseio.com",
+            projectId: "ufobikeshop",
+            storageBucket: "ufobikeshop.appspot.com",
+            messagingSenderId: "668306980892",
+            appId: "1:668306980892:web:01c597c856771294ed5fd9"
+        };
+
+        // Inicialización
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.database();
+        let userLogueado = null;
+
+        // 2. CONTROL DE SESIÓN
+        auth.onAuthStateChanged(user => {
+            userLogueado = user;
+            console.log(user ? "Admin Online" : "Modo Cliente");
+        });
+
+        // 3. NAVEGACIÓN PROTEGIDA
+        async function showPage(id) {
+            if (id === 'admin' && !userLogueado) {
+                const mail = prompt("EMAIL ADMIN:");
+                const pass = prompt("PASSWORD:");
+                if (!mail || !pass) return;
+                try {
+                    await auth.signInWithEmailAndPassword(mail, pass);
+                } catch (e) {
+                    alert("Error de acceso");
+                    return;
+                }
+            }
+
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            
+            document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
+            const link = document.getElementById('l-' + id);
+            if(link) link.classList.add('active');
+            window.scrollTo(0,0);
+        }
+
+        // 4. MANEJO DE DATOS (Realtime)
+        function iniciarApp() {
+            db.ref('products').on('value', snap => {
+                const data = snap.val();
+                renderizarTodo(data);
+            }, error => {
+                console.error("Error DB:", error);
+                document.getElementById('grid-tienda').innerHTML = "<p>Error al conectar con la base de datos. Verifica las reglas de Firebase.</p>";
+            });
+        }
+
+        function renderizarTodo(data) {
+            const grid = document.getElementById('grid-tienda');
+            const lista = document.getElementById('inv-items');
+            grid.innerHTML = "";
+            lista.innerHTML = "";
+
+            if(!data) {
+                grid.innerHTML = "<p>No hay productos en el hangar.</p>";
+                return;
+            }
+
+            Object.keys(data).forEach(key => {
+                const p = data[key];
+                // Tienda
+                grid.innerHTML += `
+                    <div class="card">
+                        <h3>${p.name}</h3>
+                        <span class="price">$${Number(p.price).toLocaleString()}</span>
+                        <p style="font-size:0.7rem; color:#666; margin-bottom:10px;">STOCK: ${p.stock}</p>
+                        <button class="btn" onclick="pagar('${p.name}', ${p.price})">COMPRAR</button>
+                    </div>
+                `;
+                // Admin
+                lista.innerHTML += `
+                    <div style="background:#111; padding:10px; margin-bottom:5px; border-left:4px solid var(--cyan); display:flex; justify-content:space-between;">
+                        <span>${p.name} - $${p.price}</span>
+                        <button onclick="eliminar('${key}')" style="color:red; background:none; border:none; cursor:pointer;">[X]</button>
+                    </div>
+                `;
+            });
+        }
+
+        // 5. ACCIONES ADMIN
+        function subirProducto() {
+            const n = document.getElementById('name').value;
+            const p = document.getElementById('price').value;
+            const s = document.getElementById('stock').value;
+            if(!n || !p) return alert("Faltan datos");
+
+            const id = Date.now();
+            db.ref('products/' + id).set({
+                id: id, name: n, price: Number(p), stock: Number(s)
+            }).then(() => {
+                alert("Sincronizado");
+                document.getElementById('name').value = "";
+                document.getElementById('price').value = "";
+                document.getElementById('stock').value = "";
+            });
+        }
+
+        function eliminar(id) {
+            if(confirm("¿Borrar producto?")) db.ref('products/' + id).remove();
+        }
+
+        function logout() {
+            auth.signOut().then(() => location.reload());
+        }
+
+        // 6. MERCADO PAGO (Simulación hasta que uses tu fetch)
+        function pagar(nombre, precio) {
+            alert("Redirigiendo a Mercado Pago para comprar: " + nombre + "\nTotal: $" + precio);
+        }
+
+        // 7. CURSOR
+        document.addEventListener('mousemove', e => {
+            const c = document.getElementById('cursor');
+            if(c) {
+                c.style.left = e.clientX + 'px';
+                c.style.top = e.clientY + 'px';
+            }
+        });
+
+        // ARRANCAR
+        iniciarApp();
+
+    </script>
+</body>
+</html>
