@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UFO Bike Shop | Deep Digital Store</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet">
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <style>
+        :root {
+            --cyan: #00e5ff;
+            --cyan-glow: rgba(0,229,255,0.15);
+            --black: #0a0a0f;
+            --dark: #111118;
+            --card: #16161f;
+            --border: rgba(0,229,255,0.2);
+            --text: #e8e8f0;
+            --muted: #888899;
+            --font-display: 'Orbitron', sans-serif;
+            --font-body: 'Exo 2', sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; cursor: none; }
+        body { background: var(--black); color: var(--text); font-family: var(--font-body); overflow-x: hidden; }
+
+        /* Cursor Neón */
+        #cursor {
+            width: 18px; height: 18px; border: 2px solid var(--cyan); border-radius: 50%;
+            position: fixed; pointer-events: none; z-index: 9999;
+            transform: translate(-50%,-50%); transition: transform 0.1s;
+        }
+
+        /* Navbar */
+        nav {
+            position: fixed; top: 0; width: 100%; z-index: 1000;
+            background: rgba(10,10,15,0.9); backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 48px; height: 70px;
+        }
+        .nav-logo { font-family: var(--font-display); color: var(--cyan); text-decoration: none; font-weight: 900; letter-spacing: 3px; }
+        .nav-links { display: flex; gap: 32px; list-style: none; }
+        .nav-links a { color: var(--muted); text-decoration: none; font-family: var(--font-display); font-size: 0.65rem; text-transform: uppercase; }
+        .nav-links a.active { color: var(--cyan); }
+
+        /* Secciones */
+        .page { display: none; padding: 100px 48px 48px; min-height: 100vh; }
+        .page.active { display: block; }
+
+        /* Estilos de Admin */
+        .admin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+        .admin-form { background: var(--card); border: 1px solid var(--border); padding: 32px; border-radius: 8px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-size: 0.7rem; color: var(--cyan); margin-bottom: 5px; font-family: var(--font-display); }
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%; background: var(--dark); border: 1px solid var(--border); color: white; padding: 10px; border-radius: 4px; outline: none;
+        }
+        .btn-primary { 
+            background: var(--cyan); color: black; border: none; padding: 12px 24px; 
+            font-family: var(--font-display); font-weight: 700; font-size: 0.7rem; letter-spacing: 2px;
+        }
+
+        footer { border-top: 1px solid var(--border); padding: 40px; text-align: center; color: var(--muted); font-size: 0.8rem; }
+    </style>
+</head>
+<body>
+
+    <div id="cursor"></div>
+
+    <nav>
+        <a href="#" class="nav-logo" onclick="showPage('home')">UFO BIKESHOP</a>
+        <ul class="nav-links">
+            <li><a href="#" onclick="showPage('home')">Tienda</a></li>
+            <li><a href="#" onclick="showPage('servicios')">Servicios</a></li>
+            <li><a href="#" onclick="showPage('admin')">Admin</a></li>
+        </ul>
+    </nav>
+
+    <section id="home" class="page active">
+        <h1 style="font-family: var(--font-display); color: white;">CATÁLOGO <span style="color: var(--cyan);">INTERGALÁCTICO</span></h1>
+        <div id="product-grid" class="product-grid">
+            </div>
+    </section>
+
+    <section id="admin" class="page">
+        <div class="admin-grid">
+            <div class="admin-form">
+                <h2 style="font-family: var(--font-display); margin-bottom: 20px;">PANEL DE CONTROL</h2>
+                <div class="form-group">
+                    <label>Nombre del Producto</label>
+                    <input type="text" id="p-name">
+                </div>
+                <div class="form-group">
+                    <label>Precio (ARS)</label>
+                    <input type="number" id="p-price">
+                </div>
+                <div class="form-group">
+                    <label>Stock</label>
+                    <input type="number" id="p-stock">
+                </div>
+                <button class="btn-primary" onclick="saveProduct()">GUARDAR PRODUCTO</button>
+                <button onclick="logout()" style="background:none; border:none; color:red; margin-top:20px; font-size:0.6rem; letter-spacing:2px;">CERRAR SESIÓN</button>
+            </div>
+            <div id="admin-list" class="admin-list">
+                </div>
+        </div>
+    </section>
+
+    <footer>
+        👽 UFO BIKE SHOP<br>
+        © 2026 UFO Bike Shop · Tucumán, Argentina<br>
+        Powered by MercadoPago 🔒
+    </footer>
+
+    <script>
+        // 1. CONFIGURACIÓN DE FIREBASE (Asegúrate que estos datos sean los tuyos)
+        const firebaseConfig = {
+            apiKey: "AIzaSyAjhXwzb8Et49_vy2Mz-mRT2a_h83HFHvQ",
+            authDomain: "ufobikeshop.firebaseapp.com",
+            databaseURL: "https://ufobikeshop-default-rtdb.firebaseio.com",
+            projectId: "ufobikeshop",
+            storageBucket: "ufobikeshop.appspot.com",
+            messagingSenderId: "668306980892",
+            appId: "1:668306980892:web:01c597c856771294ed5fd9"
+        };
+
+        // Inicializar Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        
+        const auth = firebase.auth();
+        const db = firebase.database();
+        let currentUser = null;
+
+        // Monitor de sesión de Firebase
+        auth.onAuthStateChanged(user => {
+            currentUser = user;
+            console.log(user ? "Comandante en línea: " + user.email : "Modo Civil");
+        });
+
+        // 2. FUNCIÓN DE NAVEGACIÓN PROTEGIDA
+        async function showPage(pageId) {
+            if (pageId === 'admin') {
+                if (!currentUser) {
+                    const email = prompt("SISTEMA DE SEGURIDAD UFO\nIngrese Email de Administrador:");
+                    const pass = prompt("Ingrese Contraseña:");
+                    if (!email || !pass) return;
+
+                    try {
+                        await auth.signInWithEmailAndPassword(email, pass);
+                        alert("IDENTIDAD CONFIRMADA. ACCESO CONCEDIDO.");
+                    } catch (error) {
+                        alert("ERROR: Credenciales incorrectas.");
+                        return; 
+                    }
+                }
+            }
+
+            // Ocultar todas las páginas y mostrar la seleccionada
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            const target = document.getElementById(pageId);
+            if (target) {
+                target.classList.add('active');
+            }
+
+            // Actualizar menú
+            document.querySelectorAll('.nav-links a').forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('onclick')?.includes(`'${pageId}'`)) {
+                    link.classList.add('active');
+                }
+            });
+            window.scrollTo(0, 0);
+        }
+
+        // 3. LÓGICA DEL CURSOR
+        document.addEventListener('mousemove', (e) => {
+            const cursor = document.getElementById('cursor');
+            if(cursor) {
+                cursor.style.left = e.clientX + 'px';
+                cursor.style.top = e.clientY + 'px';
+            }
+        });
+
+        // 4. FUNCIÓN PARA CERRAR SESIÓN
+        function logout() {
+            auth.signOut().then(() => {
+                alert("SESIÓN FINALIZADA");
+                location.reload();
+            });
+        }
+
+        // --- AQUÍ PUEDES PEGAR TUS FUNCIONES DE MANEJO DE PRODUCTOS ---
+        function saveProduct() {
+            const name = document.getElementById('p-name').value;
+            const price = document.getElementById('p-price').value;
+            const stock = document.getElementById('p-stock').value;
+
+            if(!name || !price) return alert("Completa los campos");
+
+            const newId = Date.now();
+            db.ref('products/' + newId).set({
+                id: newId,
+                name: name,
+                price: Number(price),
+                stock: Number(stock)
+            }).then(() => {
+                alert("PRODUCTO CARGADO A LA NAVE NODRIZA");
+                document.getElementById('p-name').value = "";
+                document.getElementById('p-price').value = "";
+                document.getElementById('p-stock').value = "";
+            });
+        }
+
+    </script>
+</body>
+</html>
