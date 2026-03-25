@@ -10,7 +10,7 @@ module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
   try {
-    const { orderId, items, total, approvedAt } = req.body;
+    const { orderId, items, total, subtotal, shipping, shippingCost, buyer, approvedAt } = req.body;
 
     const SERVICE_ID  = process.env.EMAILJS_SERVICE_ID;
     const TEMPLATE_ID = process.env.EMAILJS_TEMPLATE_ID;
@@ -37,17 +37,34 @@ module.exports = async (req, res) => {
     const fecha = new Date(approvedAt || Date.now())
       .toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' });
 
+    // Datos del comprador
+    let buyerStr = 'No especificado';
+    if (buyer?.name) {
+      buyerStr = buyer.name;
+      if (buyer.street) buyerStr += `\n   Dirección: ${buyer.street}, ${buyer.city}, ${buyer.province} (CP: ${buyer.cp})`;
+    }
+
+    // Envío
+    let shippingStr = 'Retiro en local';
+    if (shipping && shipping.id !== 'retiro') {
+      const precio = shippingCost === 0 ? 'GRATIS' : `$${Number(shippingCost).toLocaleString('es-AR')}`;
+      shippingStr = `${shipping.nombre} — ${precio}`;
+    }
+
     const payload = {
       service_id:  SERVICE_ID,
       template_id: TEMPLATE_ID,
       user_id:     PUBLIC_KEY,
       accessToken: PRIVATE_KEY || '',
       template_params: {
-        order_id:   orderId,
-        order_date: fecha,
-        items_list: itemsList,
-        total:      `$${Number(total).toLocaleString('es-AR')}`,
-        store_name: 'UFO Bike Shop',
+        order_id:    orderId,
+        order_date:  fecha,
+        items_list:  itemsList,
+        subtotal:    `$${Number(subtotal || total).toLocaleString('es-AR')}`,
+        shipping_info: shippingStr,
+        total:       `$${Number(total).toLocaleString('es-AR')}`,
+        buyer_info:  buyerStr,
+        store_name:  'UFO Bike Shop',
       },
     };
 
