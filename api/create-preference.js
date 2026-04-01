@@ -1,31 +1,23 @@
-// api/create-preference.js — con validación de inputs y rate limiting
+// api/create-preference.js — con validación, rate limiting y compatibilidad prueba/producción
 
 const https = require('https');
 
-// Rate limiting en memoria (se resetea con cada deploy, suficiente para Vercel)
+// Rate limiting
 const rateLimitMap = new Map();
-const RATE_LIMIT   = 10;   // máx llamadas por IP
-const RATE_WINDOW  = 60000; // en 60 segundos
+const RATE_LIMIT   = 10;
+const RATE_WINDOW  = 60000;
 
 function checkRateLimit(ip) {
   const now  = Date.now();
   const data = rateLimitMap.get(ip) || { count: 0, resetAt: now + RATE_WINDOW };
-
-  if (now > data.resetAt) {
-    data.count   = 0;
-    data.resetAt = now + RATE_WINDOW;
-  }
-
+  if (now > data.resetAt) { data.count = 0; data.resetAt = now + RATE_WINDOW; }
   data.count++;
   rateLimitMap.set(ip, data);
-
-  // Limpiar IPs viejas cada 1000 entradas
   if (rateLimitMap.size > 1000) {
     for (const [k, v] of rateLimitMap) {
       if (now > v.resetAt) rateLimitMap.delete(k);
     }
   }
-
   return data.count > RATE_LIMIT;
 }
 
@@ -35,35 +27,31 @@ function sanitizeString(str, maxLen = 200) {
 }
 
 module.exports = async (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', 'https://ufo-bikeshop.vercel.app');
+  res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST')   return res.status(405).json({ error: 'Method Not Allowed' });
 
-  // ── Rate limiting ──────────────────────────────────────────────────────
+  // Rate limiting
   const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
           || req.headers['x-real-ip']
-          || req.socket?.remoteAddress
           || 'unknown';
-
   if (checkRateLimit(ip)) {
-    console.warn(`Rate limit excedido para IP: ${ip}`);
     return res.status(429).json({ error: 'Demasiadas solicitudes. Intentá en un minuto.' });
   }
 
   try {
     const { items, buyer, orderId, shippingCost } = req.body;
 
-    // ── Validación de inputs ───────────────────────────────────────────────
+    // Validación de items
     if (!items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: 'El carrito está vacío.' });
     }
     if (items.length > 50) {
       return res.status(400).json({ error: 'Demasiados productos en el carrito.' });
     }
-
     for (const item of items) {
       const price = Number(item.price);
       const qty   = Number(item.qty);
@@ -78,13 +66,6 @@ module.exports = async (req, res) => {
       }
     }
 
-    if (shippingCost !== undefined) {
-      const sc = Number(shippingCost);
-      if (isNaN(sc) || sc < 0 || sc > 1_000_000) {
-        return res.status(400).json({ error: 'Costo de envío inválido.' });
-      }
-    }
-
     const ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN;
     const SUCCESS_URL  = process.env.MP_SUCCESS_URL  || 'https://ufo-bikeshop.vercel.app/gracias.html';
     const FAILURE_URL  = process.env.MP_FAILURE_URL  || 'https://ufo-bikeshop.vercel.app';
@@ -94,7 +75,7 @@ module.exports = async (req, res) => {
       return res.status(500).json({ error: 'Configuración de pago incompleta.' });
     }
 
-    // ── Construir preferencia sanitizada ──────────────────────────────────
+    // Construir items sanitizados
     const mpItems = items.map(item => ({
       id:          String(item.id).substring(0, 50),
       title:       sanitizeString(item.name, 256),
@@ -104,13 +85,13 @@ module.exports = async (req, res) => {
       currency_id: 'ARS',
     }));
 
-    // Agregar envío como ítem si corresponde
+    // Agregar envío si corresponde
     const sc = Number(shippingCost);
     if (!isNaN(sc) && sc > 0) {
       mpItems.push({
         id:          'envio',
-        title:       'Costo de envío',
-        description: 'Envío a domicilio',
+        title:       'Envío a domicilio',
+        description: 'Costo de envío',
         quantity:    1,
         unit_price:  sc,
         currency_id: 'ARS',
@@ -119,12 +100,9 @@ module.exports = async (req, res) => {
 
     const safeOrderId = sanitizeString(String(orderId || `UFO-${Date.now()}`), 50);
 
+    // Construir preferencia — sin payer vacío ni expiration que cause problemas en prueba
     const preference = {
-      items: mpItems,
-      payer: buyer ? {
-        name:  sanitizeString(buyer.name  || '', 100),
-        email: sanitizeString(buyer.email || '', 200),
-      } : undefined,
+      items:                mpItems,
       back_urls: {
         success: SUCCESS_URL,
         failure: FAILURE_URL,
@@ -134,9 +112,17 @@ module.exports = async (req, res) => {
       statement_descriptor: 'UFO BIKE SHOP',
       external_reference:   safeOrderId,
       notification_url:     WEBHOOK_URL,
-      expires:              true,
-      expiration_date_to:   new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // expira en 24hs
     };
+
+    // Agregar payer solo si tiene email válido
+    if (buyer && buyer.email && buyer.email.includes('@')) {
+      preference.payer = {
+        name:  sanitizeString(buyer.name || '', 100),
+        email: sanitizeString(buyer.email, 200),
+      };
+    }
+
+    console.log('Creando preferencia MP:', safeOrderId, 'items:', mpItems.length);
 
     const mpResponse = await postJSON(
       'api.mercadopago.com',
@@ -145,7 +131,14 @@ module.exports = async (req, res) => {
       { Authorization: `Bearer ${ACCESS_TOKEN}`, 'Content-Type': 'application/json' }
     );
 
-    if (mpResponse.error) throw new Error(mpResponse.message || JSON.stringify(mpResponse));
+    console.log('Respuesta MP:', JSON.stringify(mpResponse).substring(0, 200));
+
+    if (mpResponse.error || mpResponse.status === 400) {
+      throw new Error(mpResponse.message || mpResponse.cause?.[0]?.description || JSON.stringify(mpResponse));
+    }
+    if (!mpResponse.id) {
+      throw new Error('MP no devolvió ID de preferencia: ' + JSON.stringify(mpResponse).substring(0, 200));
+    }
 
     const isSandbox = ACCESS_TOKEN.startsWith('TEST-');
     return res.status(200).json({
@@ -157,7 +150,7 @@ module.exports = async (req, res) => {
 
   } catch (err) {
     console.error('Error create-preference:', err.message);
-    return res.status(500).json({ error: 'Error al procesar el pago. Intentá de nuevo.' });
+    return res.status(500).json({ error: 'Error al procesar el pago: ' + err.message });
   }
 };
 
@@ -165,11 +158,19 @@ function postJSON(host, path, body, headers) {
   return new Promise((resolve, reject) => {
     const data = JSON.stringify(body);
     const req  = https.request(
-      { hostname: host, path, method: 'POST', headers: { ...headers, 'Content-Length': Buffer.byteLength(data) } },
+      {
+        hostname: host,
+        path,
+        method:  'POST',
+        headers: { ...headers, 'Content-Length': Buffer.byteLength(data) }
+      },
       res => {
         let raw = '';
         res.on('data', c => raw += c);
-        res.on('end', () => { try { resolve(JSON.parse(raw)); } catch { resolve({ error: true, message: raw }); } });
+        res.on('end', () => {
+          try { resolve(JSON.parse(raw)); }
+          catch { resolve({ error: true, message: raw }); }
+        });
       }
     );
     req.on('error', reject);
