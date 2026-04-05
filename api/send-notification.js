@@ -17,16 +17,8 @@ module.exports = async (req, res) => {
     const PUBLIC_KEY  = process.env.EMAILJS_PUBLIC_KEY;
     const PRIVATE_KEY = process.env.EMAILJS_PRIVATE_KEY;
 
-    console.log('send-notification llamado para pedido:', orderId);
-    console.log('Variables configuradas:', {
-      SERVICE_ID:  SERVICE_ID  ? 'OK' : 'FALTA',
-      TEMPLATE_ID: TEMPLATE_ID ? 'OK' : 'FALTA',
-      PUBLIC_KEY:  PUBLIC_KEY  ? 'OK' : 'FALTA',
-      PRIVATE_KEY: PRIVATE_KEY ? 'OK' : 'FALTA',
-    });
 
     if (!SERVICE_ID || !TEMPLATE_ID || !PUBLIC_KEY) {
-      console.error('Faltan variables de EmailJS');
       return res.status(200).json({ ok: false, msg: 'EmailJS no configurado' });
     }
 
@@ -57,25 +49,23 @@ module.exports = async (req, res) => {
       user_id:     PUBLIC_KEY,
       accessToken: PRIVATE_KEY || '',
       template_params: {
-        order_id:    orderId,
-        order_date:  fecha,
-        items_list:  itemsList,
-        subtotal:    `$${Number(subtotal || total).toLocaleString('es-AR')}`,
+        order_id:      orderId,
+        order_date:    fecha,
+        items_list:    itemsList,
+        subtotal:      `$${Number(subtotal || total).toLocaleString('es-AR')}`,
         shipping_info: shippingStr,
-        total:       `$${Number(total).toLocaleString('es-AR')}`,
-        buyer_info:  buyerStr,
-        store_name:  'UFO Bike Shop',
+        total:         `$${Number(total).toLocaleString('es-AR')}`,
+        buyer_info:    buyerStr,
+        buyer_email:   buyer?.email || '',
+        buyer_name:    buyer?.name  || 'Cliente',
+        store_name:    'UFO Bike Shop',
       },
     };
-
-    console.log('Llamando a EmailJS...');
     const result = await postJSON('api.emailjs.com', '/api/v1.0/email/send', payload);
-    console.log('Respuesta de EmailJS:', JSON.stringify(result));
 
     return res.status(200).json({ ok: true, emailjs: result });
 
   } catch (err) {
-    console.error('Error en send-notification:', err.message);
     return res.status(500).json({ error: err.message });
   }
 };
@@ -92,7 +82,6 @@ function postJSON(host, path, body) {
         let raw = '';
         res.on('data', c => raw += c);
         res.on('end', () => {
-          console.log('EmailJS raw response:', raw);
           try { resolve(JSON.parse(raw)); } catch { resolve({ raw }); }
         });
       }
