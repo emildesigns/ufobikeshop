@@ -46,11 +46,11 @@ module.exports = async (req, res) => {
 
     // ── 3. Consultar el pago directamente a MP ────────────────────────────
     const ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN;
-    const payment = await getJSON(
+    const payment = await withTimeout(getJSON(
       'api.mercadopago.com',
       `/v1/payments/${paymentId}`,
       { Authorization: `Bearer ${ACCESS_TOKEN}` }
-    );
+    ), 8000);
 
     if (!payment || !payment.id) {
       console.warn('Pago no encontrado en MP:', paymentId);
@@ -94,6 +94,16 @@ module.exports = async (req, res) => {
     return res.status(500).send('Error: ' + err.message);
   }
 };
+
+// Wrapper con timeout
+function withTimeout(promise, ms = 8000) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(`Timeout: ${ms/1000}s`)), ms)
+    )
+  ]);
+}
 
 function getJSON(host, path, headers) {
   return new Promise((resolve, reject) => {
