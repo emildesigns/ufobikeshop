@@ -124,12 +124,12 @@ module.exports = async (req, res) => {
 
     console.log('Creando preferencia MP:', safeOrderId, 'items:', mpItems.length);
 
-    const mpResponse = await postJSON(
+    const mpResponse = await withTimeout(postJSON(
       'api.mercadopago.com',
       '/checkout/preferences',
       preference,
       { Authorization: `Bearer ${ACCESS_TOKEN}`, 'Content-Type': 'application/json' }
-    );
+    ), 10000);
 
     console.log('Respuesta MP:', JSON.stringify(mpResponse).substring(0, 200));
 
@@ -153,6 +153,16 @@ module.exports = async (req, res) => {
     return res.status(500).json({ error: 'Error al procesar el pago: ' + err.message });
   }
 };
+
+// Wrapper con timeout para llamadas HTTP
+function withTimeout(promise, ms = 8000) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(`Timeout: la operación tardó más de ${ms/1000}s`)), ms)
+    )
+  ]);
+}
 
 function postJSON(host, path, body, headers) {
   return new Promise((resolve, reject) => {
