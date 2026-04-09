@@ -1,11 +1,10 @@
 // api/cotizar-envio.js — Integración Correo Argentino API MiCorreo v1
 const https = require('https');
 
-// Cache del token JWT para no pedir uno nuevo en cada request
+// Cache del token JWT
 let tokenCache = { token: null, expires: null };
 
 async function getToken() {
-  // Si el token es válido por más de 5 minutos, lo reutilizamos
   if (tokenCache.token && tokenCache.expires && new Date(tokenCache.expires) > new Date(Date.now() + 5 * 60 * 1000)) {
     return tokenCache.token;
   }
@@ -13,7 +12,7 @@ async function getToken() {
   const user = process.env.CORREO_USER;
   const pass = process.env.CORREO_PASS;
 
-  if (!user || !pass) throw new Error('Faltan credenciales CORREO_USER / CORREO_PASS');
+  if (!user || !pass) throw new Error('Faltan CORREO_USER / CORREO_PASS');
 
   const basicAuth = Buffer.from(`${user}:${pass}`).toString('base64');
 
@@ -24,35 +23,10 @@ async function getToken() {
     headers:  { 'Authorization': `Basic ${basicAuth}` },
   });
 
-  if (!data.token) throw new Error('No se obtuvo token de Correo Argentino');
+  if (!data.token) throw new Error(`Token error: ${JSON.stringify(data)}`);
 
   tokenCache = { token: data.token, expires: data.expires };
   return data.token;
-}
-
-async function cotizarEnvio(token, customerId, cpOrigen, cpDestino, pesoGramos, dims) {
-  const body = JSON.stringify({
-    customerId,
-    postalCodeOrigin:      String(cpOrigen),
-    postalCodeDestination: String(cpDestino),
-    dimensions: {
-      weight: Math.max(1, Math.round(pesoGramos)),
-      height: Math.max(1, Math.round(dims.height || 10)),
-      width:  Math.max(1, Math.round(dims.width  || 15)),
-      length: Math.max(1, Math.round(dims.length || 20)),
-    },
-  });
-
-  return await request({
-    hostname: 'api.correoargentino.com.ar',
-    path:     '/micorreo/v1/rates',
-    method:   'POST',
-    headers:  {
-      'Authorization':  `Bearer ${token}`,
-      'Content-Type':   'application/json',
-      'Content-Length': Buffer.byteLength(body),
-    },
-  }, body);
 }
 
 module.exports = async (req, res) => {
@@ -71,24 +45,60 @@ module.exports = async (req, res) => {
 
     const CUSTOMER_ID = process.env.CORREO_CUSTOMER_ID;
     const CP_ORIGEN   = process.env.CORREO_CP_ORIGEN || '4107';
+    const user        = process.env.CORREO_USER;
+    const pass        = process.env.CORREO_PASS;
 
-    if (!process.env.CORREO_USER || !process.env.CORREO_PASS || !CUSTOMER_ID) {
-      return res.status(200).json({ error: 'Credenciales no configuradas', opciones: [] });
+    // Verificar variables
+    if (!user || !pass || !CUSTOMER_ID) {
+      return res.status(200).json({
+        error: `Variables faltantes: USER=${!!user} PASS=${!!pass} CID=${!!CUSTOMER_ID}`,
+        opciones: []
+      });
     }
 
     const pesoGramos = Math.max(1, Math.round((pesoKg || 0.5) * 1000));
 
-    // Obtener token JWT
-    const token = await getToken();
-
-    // Cotizar con Correo Argentino
-    const result = await cotizarEnvio(token, CUSTOMER_ID, CP_ORIGEN, cpDestino, pesoGramos, dims || {});
-
-    if (!result || !result.rates || result.rates.length === 0) {
-      return res.status(200).json({ error: 'Sin cotización disponible para ese CP', opciones: [] });
+    // Paso 1: obtener token
+    let token;
+    try {
+      token = await getToken();
+    } catch(e) {
+      return res.status(200).json({ error: `Auth error: ${e.message}`, opciones: [] });
     }
 
-    // Formatear opciones
+    // Paso 2: cotizar
+    const body = JSON.stringify({
+      customerId:            String(CUSTOMER_ID),
+      postalCodeOrigin:      String(CP_ORIGEN),
+      postalCodeDestination: String(cpDestino),
+      dimensions: {
+        weight: pesoGramos,
+        height: Math.max(1, Math.round(dims?.height || 10)),
+        width:  Math.max(1, Math.round(dims?.width  || 15)),
+        length: Math.max(1, Math.round(dims?.length || 20)),
+      },
+    });
+
+    const result = await request({
+      hostname: 'api.correoargentino.com.ar',
+      path:     '/micorreo/v1/rates',
+      method:   'POST',
+      headers:  {
+        'Authorization':  `Bearer ${token}`,
+        'Content-Type':   'application/json',
+        'Content-Length': Buffer.byteLength(body),
+      },
+    }, body);
+
+    // Devolver resultado completo para diagnóstico
+    if (!result || !result.rates || result.rates.length === 0) {
+      return res.status(200).json({
+        error: 'Sin cotización disponible para ese CP',
+        debug: result,
+        opciones: []
+      });
+    }
+
     const opciones = result.rates.map(r => ({
       id:          r.deliveredType === 'D' ? 'correo-domicilio' : 'correo-sucursal',
       nombre:      r.deliveredType === 'D' ? 'Correo Argentino — Domicilio' : 'Correo Argentino — Sucursal',
@@ -99,7 +109,6 @@ module.exports = async (req, res) => {
     return res.status(200).json({ opciones });
 
   } catch(err) {
-    // Si falla la API de Correo, devolver error para que el frontend use el tarifario OCA
     return res.status(200).json({ error: err.message, opciones: [] });
   }
 };
@@ -111,11 +120,11 @@ function request(options, body = null) {
       r.on('data', c => raw += c);
       r.on('end', () => {
         try { resolve(JSON.parse(raw)); }
-        catch { resolve({ raw: raw.substring(0, 300) }); }
+        catch { resolve({ parseError: true, raw: raw.substring(0, 500) }); }
       });
     });
     req.on('error', reject);
-    req.setTimeout(8000, () => { req.destroy(); reject(new Error('Timeout Correo Argentino')); });
+    req.setTimeout(10000, () => { req.destroy(); reject(new Error('Timeout 10s')); });
     if (body) req.write(body);
     req.end();
   });
