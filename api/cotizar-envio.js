@@ -3,34 +3,6 @@ const https = require('https');
 
 let tokenCache = { token: null, expires: null };
 
-// Mapa de prefijos de provincia según códigos postales argentinos
-function normalizarCP(cp) {
-  const n = parseInt(cp);
-  if (n >= 1000 && n <= 1499) return `C${cp}`; // CABA
-  if (n >= 1500 && n <= 1999) return `B${cp}`; // GBA
-  if (n >= 2000 && n <= 2999) return `S${cp}`; // Santa Fe
-  if (n >= 3000 && n <= 3499) return `S${cp}`; // Santa Fe / Entre Ríos
-  if (n >= 3500 && n <= 3999) return `E${cp}`; // Entre Ríos / Corrientes
-  if (n >= 4000 && n <= 4199) return `T${cp}`; // Tucumán
-  if (n >= 4200 && n <= 4399) return `T${cp}`; // Tucumán / Catamarca
-  if (n >= 4400 && n <= 4599) return `A${cp}`; // Salta
-  if (n >= 4600 && n <= 4799) return `Y${cp}`; // Jujuy
-  if (n >= 5000 && n <= 5499) return `X${cp}`; // Córdoba
-  if (n >= 5500 && n <= 5599) return `M${cp}`; // Mendoza
-  if (n >= 5600 && n <= 5799) return `D${cp}`; // San Luis
-  if (n >= 5800 && n <= 5999) return `X${cp}`; // Córdoba
-  if (n >= 6000 && n <= 6499) return `B${cp}`; // Buenos Aires prov.
-  if (n >= 6500 && n <= 6999) return `L${cp}`; // La Pampa
-  if (n >= 7000 && n <= 7999) return `B${cp}`; // Buenos Aires prov.
-  if (n >= 8000 && n <= 8499) return `Q${cp}`; // Neuquén / Río Negro
-  if (n >= 8500 && n <= 8799) return `R${cp}`; // Río Negro
-  if (n >= 8800 && n <= 8999) return `U${cp}`; // Chubut
-  if (n >= 9000 && n <= 9299) return `Z${cp}`; // Santa Cruz
-  if (n >= 9300 && n <= 9499) return `V${cp}`; // Tierra del Fuego
-  // Si no coincide, devolver tal cual
-  return cp;
-}
-
 async function getToken() {
   if (tokenCache.token && tokenCache.expires && new Date(tokenCache.expires) > new Date(Date.now() + 5 * 60 * 1000)) {
     return tokenCache.token;
@@ -70,16 +42,18 @@ module.exports = async (req, res) => {
       return res.status(200).json({ error: 'Credenciales no configuradas', opciones: [] });
     }
 
-    const pesoGramos  = Math.max(1, Math.round((pesoKg || 0.5) * 1000));
-    const cpOrigenNorm  = normalizarCP(CP_ORIGEN);
-    const cpDestinoNorm = normalizarCP(cpDestino);
+    const pesoGramos = Math.max(1, Math.round((pesoKg || 0.5) * 1000));
+    const token      = await getToken();
 
-    const token = await getToken();
+    // Según el manual los CPs van SIN prefijo de provincia — solo números
+    const cpOrigenNum  = String(CP_ORIGEN).replace(/[^0-9]/g, '');
+    const cpDestinoNum = String(cpDestino).replace(/[^0-9]/g, '');
 
     const body = JSON.stringify({
       customerId:            String(CUSTOMER_ID),
-      postalCodeOrigin:      cpOrigenNorm,
-      postalCodeDestination: cpDestinoNorm,
+      postalCodeOrigin:      cpOrigenNum,
+      postalCodeDestination: cpDestinoNum,
+      deliveredType:         'D',
       dimensions: {
         weight: pesoGramos,
         height: Math.max(1, Math.round(dims?.height || 10)),
@@ -101,14 +75,15 @@ module.exports = async (req, res) => {
 
     if (!result || !result.rates || result.rates.length === 0) {
       return res.status(200).json({
-        error: `Sin cotización para CP ${cpDestinoNorm}`,
+        error: `Sin cotización para CP ${cpDestinoNum}`,
+        rawResult: result,
         opciones: []
       });
     }
 
     const opciones = result.rates.map(r => ({
-      id:          r.deliveredType === 'D' ? 'correo-domicilio' : 'correo-sucursal',
-      nombre:      r.deliveredType === 'D' ? 'Correo Argentino — Domicilio' : 'Correo Argentino — Sucursal',
+      id:          'correo-domicilio',
+      nombre:      'Correo Argentino — Domicilio',
       descripcion: `Correo Argentino · ${r.productName || 'Clásico'} · Entrega a domicilio`,
       precio:      Math.round(r.price),
     }));
