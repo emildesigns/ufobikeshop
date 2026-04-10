@@ -1,5 +1,6 @@
 // api/validate-order.js — Valida el monto de un pedido de transferencia contra Firebase
 const https = require('https');
+const { checkRateLimit, getIP } = require('./_rateLimit');
 
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -7,6 +8,11 @@ module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST')   return res.status(405).json({ error: 'Method Not Allowed' });
+
+  // Rate limiting — máximo 20 validaciones por IP por minuto
+  if (checkRateLimit(getIP(req), 20, 60000)) {
+    return res.status(429).json({ error: 'Demasiadas solicitudes. Intentá en un minuto.' });
+  }
 
   try {
     const { items, shippingCost, totalFromClient } = req.body;
