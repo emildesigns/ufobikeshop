@@ -1,5 +1,6 @@
 // api/send-notification.js
 const https = require('https');
+const { checkRateLimit, getIP } = require('./_rateLimit');
 
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -8,6 +9,11 @@ module.exports = async (req, res) => {
 
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
+
+  // Rate limiting — máximo 10 emails por IP por hora
+  if (checkRateLimit(getIP(req), 10, 3600000)) {
+    return res.status(429).json({ ok: false, msg: 'Demasiadas solicitudes. Intentá más tarde.' });
+  }
 
   try {
     const { orderId, items, total, subtotal, shipping, shippingCost, buyer, approvedAt } = req.body;
