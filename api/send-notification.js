@@ -56,7 +56,7 @@ module.exports = async (req, res) => {
         shipping_info: shippingStr,
         total:         `$${Number(total).toLocaleString('es-AR')}`,
         buyer_info:    buyerStr,
-        buyer_email:   buyer?.email || '',
+        buyer_email:   buyer?.email || process.env.OWNER_EMAIL || '',
         buyer_name:    buyer?.name  || 'Cliente',
         store_name:    'UFO Bike Shop',
       },
