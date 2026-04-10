@@ -1,5 +1,6 @@
 // api/cotizar-envio.js — Correo Argentino API MiCorreo v1
 const https = require('https');
+const { checkRateLimit, getIP } = require('./_rateLimit');
 
 let tokenCache = { token: null, expires: null };
 
@@ -27,6 +28,11 @@ module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST')   return res.status(405).json({ error: 'Method Not Allowed' });
+
+  // Rate limiting — máximo 30 cotizaciones por IP por minuto
+  if (checkRateLimit(getIP(req), 30, 60000)) {
+    return res.status(429).json({ error: 'Demasiadas solicitudes. Intentá en un minuto.', opciones: [] });
+  }
 
   try {
     const { cpDestino, pesoKg, dims } = req.body;
