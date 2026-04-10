@@ -61,9 +61,10 @@ module.exports = async (req, res) => {
         store_name:    'UFO Bike Shop',
       },
     };
-    const result = await postJSON('api.emailjs.com', '/api/v1.0/email/send', payload);
 
-    return res.status(200).json({ ok: true, emailjs: result });
+    // Debug — devolver buyer_email en la respuesta para diagnóstico
+    const result = await postJSON('api.emailjs.com', '/api/v1.0/email/send', payload);
+    return res.status(200).json({ ok: true, emailjs: result, debug_email: buyer?.email || 'VACIO' });
 
   } catch (err) {
     return res.status(500).json({ error: err.message });
