@@ -67,12 +67,21 @@ module.exports = async (req, res) => {
       return res.status(200).send('OK - invalid amount');
     }
 
-    // ── 4. Actualizar Firebase ────────────────────────────────────────────
-    const FIREBASE_URL = process.env.FIREBASE_URL ||
-                         'https://ufobikeshop-default-rtdb.firebaseio.com';
+    // ── 4. Actualizar Firebase con autenticación ──────────────────────────
+    const FIREBASE_URL    = process.env.FIREBASE_URL ||
+                            'https://ufobikeshop-default-rtdb.firebaseio.com';
+    const FIREBASE_SECRET = process.env.FIREBASE_SECRET;
+
+    if (!FIREBASE_SECRET) {
+      console.error('FIREBASE_SECRET no configurado — no se puede actualizar el pedido');
+      return res.status(200).send('OK - firebase secret missing');
+    }
+
+    // Usar el Database Secret como auth param para escritura privilegiada
+    const authParam = `?auth=${FIREBASE_SECRET}`;
 
     await patchJSON(
-      `${FIREBASE_URL}/orders/${orderId}.json`,
+      `${FIREBASE_URL}/orders/${orderId}.json${authParam}`,
       {
         paymentStatus: status,
         paymentId:     String(paymentId),
