@@ -35,13 +35,13 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const { cpDestino, pesoKg, dims } = req.body;
+    const { cpDestino, pesoKg, dims, customerIdOverride } = req.body;
 
     if (!cpDestino || cpDestino.length < 4) {
       return res.status(400).json({ error: 'CP de destino inválido' });
     }
 
-    const CUSTOMER_ID = process.env.CORREO_CUSTOMER_ID;
+    const CUSTOMER_ID = customerIdOverride || process.env.CORREO_CUSTOMER_ID;
     const CP_ORIGEN   = process.env.CORREO_CP_ORIGEN || '4107';
 
     if (!process.env.CORREO_USER || !process.env.CORREO_PASS || !CUSTOMER_ID) {
