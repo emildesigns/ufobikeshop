@@ -96,7 +96,7 @@ module.exports = async (req, res) => {
       precio:      Math.round(r.price),
     }));
 
-    return res.status(200).json({ opciones });
+    return res.status(200).json({ opciones, debug: { pesoGramos, cpOrigen: cpOrigenNum, cpDestino: cpDestinoNum, customerId: CUSTOMER_ID, dims: { height: Math.max(1, Math.round(dims?.height || 10)), width: Math.max(1, Math.round(dims?.width || 15)), length: Math.max(1, Math.round(dims?.length || 20)) }, rawRates: result.rates } });
 
   } catch(err) {
     return res.status(200).json({ error: err.message, opciones: [] });
