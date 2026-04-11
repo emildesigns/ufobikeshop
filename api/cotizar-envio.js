@@ -35,13 +35,15 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const { cpDestino, pesoKg, dims, customerIdOverride } = req.body;
+    const { cpDestino, pesoKg, dims } = req.body;
 
     if (!cpDestino || cpDestino.length < 4) {
       return res.status(400).json({ error: 'CP de destino inválido' });
     }
 
-    const CUSTOMER_ID = customerIdOverride || process.env.CORREO_CUSTOMER_ID;
+    // El customerId de Correo Argentino requiere 10 dígitos con ceros a la izquierda
+    const rawId      = process.env.CORREO_CUSTOMER_ID || '';
+    const CUSTOMER_ID = rawId.padStart(10, '0');
     const CP_ORIGEN   = process.env.CORREO_CP_ORIGEN || '4107';
 
     if (!process.env.CORREO_USER || !process.env.CORREO_PASS || !CUSTOMER_ID) {
@@ -87,10 +89,10 @@ module.exports = async (req, res) => {
       });
     }
 
-    const opciones = result.rates.map(r => ({
-      id:          'correo-domicilio',
-      nombre:      'Correo Argentino — Domicilio',
-      descripcion: `Correo Argentino · ${r.productName || 'Clásico'} · Entrega a domicilio`,
+    const opciones = result.rates.map((r, i) => ({
+      id:          `correo-${r.deliveredType === 'D' ? 'domicilio' : 'sucursal'}-${i}`,
+      nombre:      `Correo Argentino — ${r.productName || 'Clásico'}`,
+      descripcion: `Correo Argentino · Entrega a domicilio`,
       precio:      Math.round(r.price),
     }));
 
