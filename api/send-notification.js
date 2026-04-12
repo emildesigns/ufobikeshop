@@ -17,6 +17,7 @@ module.exports = async (req, res) => {
 
   try {
     const { orderId, items, total, subtotal, shipping, shippingCost, buyer, approvedAt, paymentMethod } = req.body;
+    console.log('paymentMethod recibido:', paymentMethod, '| esTransferencia:', paymentMethod === 'transferencia');
 
     const SERVICE_ID  = process.env.EMAILJS_SERVICE_ID;
     const TEMPLATE_ID = process.env.EMAILJS_TEMPLATE_ID;
