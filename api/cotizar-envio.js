@@ -17,19 +17,24 @@ async function getToken() {
     method:   'POST',
     headers:  { 'Authorization': `Basic ${basicAuth}` },
   });
-  if (!data.token) throw new Error(`Token error: ${JSON.stringify(data)}`);
+  if (!data.token) throw new Error('No se pudo autenticar con Correo Argentino');
   tokenCache = { token: data.token, expires: data.expires };
   return data.token;
 }
 
 module.exports = async (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  // ── CORS restringido al dominio propio ──────────────────────────────
+  const origin = req.headers.origin || '';
+  const allowed = ['https://ufo-bikeshop.vercel.app'];
+  if (origin && allowed.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST')   return res.status(405).json({ error: 'Method Not Allowed' });
 
-  // Rate limiting — máximo 30 cotizaciones por IP por minuto
+  // ── Rate limiting — máximo 30 cotizaciones por IP por minuto ────────
   if (checkRateLimit(getIP(req), 30, 60000)) {
     return res.status(429).json({ error: 'Demasiadas solicitudes. Intentá en un minuto.', opciones: [] });
   }
@@ -37,36 +42,46 @@ module.exports = async (req, res) => {
   try {
     const { cpDestino, pesoKg, dims } = req.body;
 
-    if (!cpDestino || cpDestino.length < 4) {
-      return res.status(400).json({ error: 'CP de destino inválido' });
+    // ── Validación de CP ────────────────────────────────────────────
+    const cpLimpio = String(cpDestino || '').replace(/\D/g, '');
+    if (!cpLimpio || cpLimpio.length < 4 || cpLimpio.length > 8) {
+      return res.status(400).json({ error: 'CP de destino inválido', opciones: [] });
     }
 
-    // El customerId de Correo Argentino requiere 10 dígitos con ceros a la izquierda
-    const rawId      = process.env.CORREO_CUSTOMER_ID || '';
+    // ── Validación de peso — entre 1g y 100kg ───────────────────────
+    const pesoKgNum = Number(pesoKg) || 0.5;
+    if (pesoKgNum <= 0 || pesoKgNum > 100) {
+      return res.status(400).json({ error: 'Peso fuera de rango permitido', opciones: [] });
+    }
+
+    // ── Validación de dimensiones — entre 1 y 150cm ─────────────────
+    const dimH = Math.min(150, Math.max(1, Math.round(Number(dims?.height) || 10)));
+    const dimW = Math.min(150, Math.max(1, Math.round(Number(dims?.width)  || 15)));
+    const dimL = Math.min(150, Math.max(1, Math.round(Number(dims?.length) || 20)));
+
+    const rawId     = process.env.CORREO_CUSTOMER_ID || '';
     const CUSTOMER_ID = rawId.padStart(10, '0');
     const CP_ORIGEN   = process.env.CORREO_CP_ORIGEN || '4107';
 
-    if (!process.env.CORREO_USER || !process.env.CORREO_PASS || !CUSTOMER_ID) {
-      return res.status(200).json({ error: 'Credenciales no configuradas', opciones: [] });
+    if (!process.env.CORREO_USER || !process.env.CORREO_PASS || !rawId) {
+      return res.status(200).json({ error: 'Servicio de envíos no disponible', opciones: [] });
     }
 
-    const pesoGramos = Math.max(1, Math.round((pesoKg || 0.5) * 1000));
-    const token      = await getToken();
+    const pesoGramos  = Math.max(1, Math.round(pesoKgNum * 1000));
+    const cpOrigenNum = String(CP_ORIGEN).replace(/[^0-9]/g, '');
 
-    // Según el manual los CPs van SIN prefijo de provincia — solo números
-    const cpOrigenNum  = String(CP_ORIGEN).replace(/[^0-9]/g, '');
-    const cpDestinoNum = String(cpDestino).replace(/[^0-9]/g, '');
+    const token = await getToken();
 
     const body = JSON.stringify({
       customerId:            String(CUSTOMER_ID),
       postalCodeOrigin:      cpOrigenNum,
-      postalCodeDestination: cpDestinoNum,
+      postalCodeDestination: cpLimpio,
       deliveredType:         'D',
       dimensions: {
         weight: pesoGramos,
-        height: Math.max(1, Math.round(dims?.height || 10)),
-        width:  Math.max(1, Math.round(dims?.width  || 15)),
-        length: Math.max(1, Math.round(dims?.length || 20)),
+        height: dimH,
+        width:  dimW,
+        length: dimL,
       },
     });
 
@@ -83,8 +98,7 @@ module.exports = async (req, res) => {
 
     if (!result || !result.rates || result.rates.length === 0) {
       return res.status(200).json({
-        error: `Sin cotización para CP ${cpDestinoNum}`,
-        rawResult: result,
+        error: `Sin cotización disponible para CP ${cpLimpio}`,
         opciones: []
       });
     }
@@ -99,7 +113,9 @@ module.exports = async (req, res) => {
     return res.status(200).json({ opciones });
 
   } catch(err) {
-    return res.status(200).json({ error: err.message, opciones: [] });
+    // No exponer detalles internos del error
+    console.error('cotizar-envio error:', err.message);
+    return res.status(200).json({ error: 'No se pudo cotizar el envío', opciones: [] });
   }
 };
 
@@ -110,11 +126,11 @@ function request(options, body = null) {
       r.on('data', c => raw += c);
       r.on('end', () => {
         try { resolve(JSON.parse(raw)); }
-        catch { resolve({ parseError: true, raw: raw.substring(0, 500) }); }
+        catch { resolve({ parseError: true }); }
       });
     });
     req.on('error', reject);
-    req.setTimeout(10000, () => { req.destroy(); reject(new Error('Timeout 10s')); });
+    req.setTimeout(10000, () => { req.destroy(); reject(new Error('Timeout')); });
     if (body) req.write(body);
     req.end();
   });
