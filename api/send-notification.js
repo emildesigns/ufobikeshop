@@ -51,11 +51,21 @@ module.exports = async (req, res) => {
     // Estado del pago según método
     const esTransferencia = paymentMethod === 'transferencia';
     const estadoPago      = esTransferencia
-      ? '⏳ PENDIENTE — En espera de verificación de transferencia'
-      : '✅ APROBADO';
+      ? '⏳ PENDIENTE DE PAGO'
+      : '✓ PAGO APROBADO';
+    const tituloEmail = esTransferencia
+      ? '¡PEDIDO REGISTRADO!'
+      : '¡GRACIAS POR TU COMPRA!';
     const mensajeComprador = esTransferencia
       ? `Tu pedido fue registrado correctamente. El pago está PENDIENTE de verificación.\n\nPor favor envianos el comprobante de transferencia por WhatsApp al +54 381 330-4791 o a ufo.bikeshop@outlook.com indicando tu N° de pedido: ${orderId}.\n\nUna vez verificado el pago confirmaremos tu pedido.`
-      : `¡Tu pago fue aprobado! Estamos preparando tu pedido.`;
+      : `Tu pedido fue confirmado. A continuación el detalle:`;
+
+    // Colores según estado — naranja para pendiente, cyan para aprobado
+    const statusColor  = esTransferencia ? '#ff9900' : '#00e5ff';
+    const statusBg     = esTransferencia ? 'rgba(255,153,0,0.1)' : 'rgba(0,229,255,0.1)';
+    const statusBorder = esTransferencia ? 'rgba(255,153,0,0.3)' : 'rgba(0,229,255,0.3)';
+    const msgBg        = esTransferencia ? 'rgba(255,153,0,0.06)' : 'rgba(0,229,255,0.06)';
+    const msgBorder    = esTransferencia ? 'rgba(255,153,0,0.2)' : 'rgba(0,229,255,0.15)';
 
     const payload = {
       service_id:  SERVICE_ID,
@@ -76,6 +86,12 @@ module.exports = async (req, res) => {
         payment_status:    estadoPago,
         payment_message:   mensajeComprador,
         payment_method:    esTransferencia ? 'Transferencia Bancaria' : 'MercadoPago',
+        order_title:       tituloEmail,
+        status_color:      statusColor,
+        status_bg:         statusBg,
+        status_border:     statusBorder,
+        msg_bg:            msgBg,
+        msg_border:        msgBorder,
       },
     };
 
