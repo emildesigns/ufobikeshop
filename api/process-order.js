@@ -47,13 +47,24 @@ module.exports = async (req, res) => {
     });
 
     // ── Descontar stock de cada producto ──
-    const items = order.items || [];
+    let items = order.items || [];
+    // items puede venir como string JSON desde Firebase
+    if (typeof items === 'string') {
+      try { items = JSON.parse(items); } catch(e) { items = []; }
+    }
+    if (!Array.isArray(items)) {
+      items = Object.values(items);
+    }
+
+    console.log(`process-order: descontando stock para ${items.length} items`);
+
     for (const item of items) {
+      if (!item || !item.id) continue;
       const prod = await fbGet(`products/${item.id}`);
       if (prod && prod.stock !== null && prod.stock !== undefined) {
         const nuevoStock = Math.max(0, Number(prod.stock) - Number(item.qty));
         await fbPatch(`products/${item.id}`, { stock: nuevoStock });
-        console.log(`Stock: ${prod.name} → ${nuevoStock}`);
+        console.log(`Stock: ${prod.name || item.id} → ${nuevoStock}`);
       }
     }
 
