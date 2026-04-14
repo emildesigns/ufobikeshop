@@ -25,6 +25,12 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: `No se puede cancelar un pedido con estado: ${order.paymentStatus}` });
     }
 
+    // Marcar como cancelado PRIMERO para evitar doble ejecución
+    await fbPatch(`orders/${orderId}`, {
+      paymentStatus: 'cancelled',
+      cancelledAt:   new Date().toISOString(),
+    });
+
     // Parsear items
     let items = order.items || [];
     if (typeof items === 'string') {
@@ -32,22 +38,18 @@ module.exports = async (req, res) => {
     }
     if (!Array.isArray(items)) items = Object.values(items);
 
-    // Devolver stock a cada producto
+    // Devolver stock a cada producto — leer stock actual de Firebase
     for (const item of items) {
       if (!item?.id) continue;
       const prod = await fbGet(`products/${item.id}`);
       if (prod && prod.stock !== null && prod.stock !== undefined) {
-        const newStock = Math.max(0, Number(prod.stock || 0) + Number(item.qty || 1));
+        const stockActual = Number(prod.stock || 0);
+        const qty         = Number(item.qty || 1);
+        const newStock    = stockActual + qty;
         await fbPatch(`products/${item.id}`, { stock: newStock });
-        console.log(`Stock devuelto: ${prod.name || item.id} → ${newStock}`);
+        console.log(`Stock devuelto: ${prod.name || item.id} ${stockActual} + ${qty} → ${newStock}`);
       }
     }
-
-    // Marcar pedido como cancelado
-    await fbPatch(`orders/${orderId}`, {
-      paymentStatus: 'cancelled',
-      cancelledAt:   new Date().toISOString(),
-    });
 
     console.log(`Pedido ${orderId} cancelado — stock devuelto`);
     return res.status(200).json({ ok: true, orderId });
