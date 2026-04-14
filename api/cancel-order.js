@@ -31,6 +31,12 @@ module.exports = async (req, res) => {
       cancelledAt:   new Date().toISOString(),
     });
 
+    // Solo devolver stock si fue descontado previamente
+    if (!order.stockDescontado) {
+      console.log(`Pedido ${orderId}: stock no fue descontado, no hay nada que devolver`);
+      return res.status(200).json({ ok: true, orderId });
+    }
+
     // Parsear items
     let items = order.items || [];
     if (typeof items === 'string') {
