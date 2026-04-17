@@ -36,6 +36,7 @@ module.exports = async (req, res) => {
       `ValorDeclarado=${valorDeclarado}`;
 
     const result = await getURL(url);
+    console.log('OCA XML response:', result?.substring(0, 1000));
 
     // La respuesta de OCA es XML — parsear precio
     if (!result || result.includes('Error') || result.includes('error')) {
