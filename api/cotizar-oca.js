@@ -47,7 +47,7 @@ module.exports = async (req, res) => {
     const diasMatch   = result.match(/<Plazo>(\d+)<\/Plazo>/);
 
     if (!precioMatch) {
-      return res.status(200).json({ error: 'No se pudo leer el precio de OCA', opciones: [], raw: result?.substring(0, 300) });
+      return res.status(200).json({ error: 'No se pudo leer el precio de OCA', opciones: [], raw: result });
     }
 
     const precio = Math.round(parseFloat(precioMatch[1]));
