@@ -42,12 +42,20 @@ module.exports = async (req, res) => {
       return res.status(200).json({ error: 'Sin cotización OCA para ese CP', opciones: [], raw: result?.substring(0, 200) });
     }
 
-    // Extraer precio del XML
+    // Extraer precio del XML — devolver campos encontrados para diagnóstico
     const precioMatch = result.match(/<Total>([\d.]+)<\/Total>/);
     const diasMatch   = result.match(/<Plazo>(\d+)<\/Plazo>/);
+    
+    // Buscar otros posibles campos de precio
+    const tagMatches = [...result.matchAll(/<(\w+)>([\d.]+)<\/\1>/g)].map(m => `${m[1]}:${m[2]}`).join(', ');
 
     if (!precioMatch) {
-      return res.status(200).json({ error: 'No se pudo leer el precio de OCA', opciones: [], raw: result });
+      return res.status(200).json({ 
+        error: 'No se pudo leer el precio', 
+        opciones: [], 
+        campos_numericos: tagMatches,
+        xml_parte: result.substring(result.indexOf('<NewDataSet'), result.indexOf('<NewDataSet') + 500)
+      });
     }
 
     const precio = Math.round(parseFloat(precioMatch[1]));
