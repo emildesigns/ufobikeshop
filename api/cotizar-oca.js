@@ -9,7 +9,7 @@ module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
   try {
-    const { cpDestino, pesoKg } = req.body;
+    const { cpDestino, pesoKg, dims } = req.body;
 
     if (!cpDestino || cpDestino.length < 4) {
       return res.status(400).json({ error: 'CP inválido', opciones: [] });
@@ -19,8 +19,21 @@ module.exports = async (req, res) => {
     const OPERATIVA = process.env.OCA_OPERATIVA  || '466210';
     const CP_ORIGEN = process.env.OCA_CP_ORIGEN  || '4107';
 
-    const peso           = Math.max(0.1, Number(pesoKg) || 0.5);
-    const volumen        = Math.max(0.0001, parseFloat((peso * 0.001).toFixed(4)));
+    const peso = Math.max(0.1, Number(pesoKg) || 0.5);
+
+    // Calcular volumen real en m³ desde dimensiones en cm
+    // Si no hay dimensiones usar estimación basada en peso
+    let volumen;
+    if (dims && dims.length && dims.width && dims.height) {
+      // Convertir cm a m y calcular volumen
+      volumen = (dims.length / 100) * (dims.width / 100) * (dims.height / 100);
+    } else {
+      // Estimación: caja cúbica de lado = cbrt(peso * 3000) cm
+      const ladoCm = Math.cbrt(peso * 3000);
+      volumen = Math.pow(ladoCm / 100, 3);
+    }
+    volumen = Math.max(0.0001, parseFloat(volumen.toFixed(6)));
+
     const valorDeclarado = Math.max(1000, Math.round(peso * 5000));
 
     const url = `https://webservice.oca.com.ar/ePak_tracking/Oep_TrackEPak.asmx/Tarifar_Envio_Corporativo?` +
