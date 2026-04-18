@@ -59,14 +59,14 @@ module.exports = async (req, res) => {
       return res.status(200).json({ error: 'Sin cotización disponible para ese CP', opciones: [] });
     }
 
-    const precio = Math.round(parseFloat(totalMatch[1]));
+    const precio = Math.round(parseFloat(totalMatch[1]) * 1.21); // precio + 21% IVA
     const plazo  = plazoMatch ? plazoMatch[1] : '';
 
     return res.status(200).json({
       opciones: [{
         id:          'oca-pap',
         nombre:      'OCA — Puerta a Puerta',
-        descripcion: `OCA PaP · Entrega a domicilio · ${peso.toFixed(2)}kg${plazo ? ` · ${plazo} días hábiles` : ''}`,
+        descripcion: `OCA PaP · Entrega a domicilio · ${peso.toFixed(2)}kg${plazo ? ` · ${plazo} días hábiles` : ''} · Precio con IVA`,
         precio,
       }]
     });
