@@ -18,17 +18,14 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const { name, email, text, stars, honeypot } = req.body;
+    const { name, text, stars, honeypot } = req.body;
 
     // ── Honeypot server-side ────────────────────────────────────────
-    if (honeypot) return res.status(200).json({ ok: true }); // silencioso
+    if (honeypot) return res.status(200).json({ ok: true });
 
     // ── Validaciones ────────────────────────────────────────────────
-    if (!name || !email || !text || !stars) {
+    if (!name || !text || !stars) {
       return res.status(400).json({ error: 'Completá todos los campos' });
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return res.status(400).json({ error: 'Email inválido' });
     }
     if (text.length < 10 || text.length > 300) {
       return res.status(400).json({ error: 'La reseña debe tener entre 10 y 300 caracteres' });
@@ -39,7 +36,6 @@ module.exports = async (req, res) => {
 
     const review = {
       name:      String(name).substring(0, 60),
-      email:     String(email).substring(0, 100),
       text:      String(text).substring(0, 300),
       stars:     Number(stars),
       status:    'pending',
