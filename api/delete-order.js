@@ -16,8 +16,11 @@ module.exports = async (req, res) => {
     if (!orderId) return res.status(400).json({ error: 'orderId requerido' });
     if (!FIREBASE_SECRET) return res.status(500).json({ error: 'Sin configuración de Firebase' });
 
-    // Soporta eliminar pedidos y reseñas
-    const path = collection === 'reviews' ? `reviews/${orderId}` : `orders/${orderId}`;
+    // Soporta eliminar pedidos, reseñas y banner
+    let path;
+    if (collection === 'reviews') path = `reviews/${orderId}`;
+    else if (collection === 'banner') path = `banner/${orderId}`;
+    else path = `orders/${orderId}`;
     await fbDelete(path);
     console.log(`${path} eliminado`);
     return res.status(200).json({ ok: true, orderId });
