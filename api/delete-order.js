@@ -12,12 +12,14 @@ module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
   try {
-    const { orderId } = req.body;
+    const { orderId, collection } = req.body;
     if (!orderId) return res.status(400).json({ error: 'orderId requerido' });
     if (!FIREBASE_SECRET) return res.status(500).json({ error: 'Sin configuración de Firebase' });
 
-    await fbDelete(`orders/${orderId}`);
-    console.log(`Pedido ${orderId} eliminado`);
+    // Soporta eliminar pedidos y reseñas
+    const path = collection === 'reviews' ? `reviews/${orderId}` : `orders/${orderId}`;
+    await fbDelete(path);
+    console.log(`${path} eliminado`);
     return res.status(200).json({ ok: true, orderId });
 
   } catch(err) {
