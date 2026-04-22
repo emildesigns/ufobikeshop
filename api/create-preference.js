@@ -67,9 +67,9 @@ module.exports = async (req, res) => {
     }
 
     const ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN;
-    const SUCCESS_URL  = process.env.MP_SUCCESS_URL  || 'https://ufo-bikeshop.vercel.app/gracias.html';
-    const FAILURE_URL  = process.env.MP_FAILURE_URL  || 'https://ufo-bikeshop.vercel.app';
-    const WEBHOOK_URL  = process.env.MP_WEBHOOK_URL  || 'https://ufo-bikeshop.vercel.app/api/mp-webhook';
+    const SUCCESS_URL  = process.env.MP_SUCCESS_URL  || 'https://ufobikeshop.com.ar/gracias.html';
+    const FAILURE_URL  = process.env.MP_FAILURE_URL  || 'https://ufobikeshop.com.ar';
+    const WEBHOOK_URL  = process.env.MP_WEBHOOK_URL  || 'https://ufobikeshop.com.ar/api/mp-webhook';
 
     if (!ACCESS_TOKEN) {
       return res.status(500).json({ error: 'Configuración de pago incompleta.' });
