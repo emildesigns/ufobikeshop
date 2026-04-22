@@ -5,7 +5,7 @@ const FIREBASE_URL    = process.env.FIREBASE_URL || 'https://ufobikeshop-default
 const FIREBASE_SECRET = process.env.FIREBASE_SECRET;
 
 module.exports = async (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', 'https://ufo-bikeshop.vercel.app');
+  res.setHeader('Access-Control-Allow-Origin', 'https://ufobikeshop.com.ar');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
