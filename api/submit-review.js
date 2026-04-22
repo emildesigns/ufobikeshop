@@ -6,7 +6,7 @@ const FIREBASE_URL    = process.env.FIREBASE_URL || 'https://ufobikeshop-default
 const FIREBASE_SECRET = process.env.FIREBASE_SECRET;
 
 module.exports = async (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', 'https://ufo-bikeshop.vercel.app');
+  res.setHeader('Access-Control-Allow-Origin', 'https://ufobikeshop.com.ar');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
@@ -18,7 +18,13 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const { name, text, stars, honeypot } = req.body;
+    const { name, text, stars, honeypot, action, key } = req.body;
+
+    // ── Acción de aprobación desde admin ────────────────────────────
+    if (action === 'approve' && key) {
+      await fbPatch(`reviews/${key}`, { status: 'approved' });
+      return res.status(200).json({ ok: true });
+    }
 
     // ── Honeypot server-side ────────────────────────────────────────
     if (honeypot) return res.status(200).json({ ok: true });
@@ -42,8 +48,8 @@ module.exports = async (req, res) => {
       createdAt: new Date().toISOString(),
     };
 
-    const key = 'review_' + Date.now();
-    await fbSet(`reviews/${key}`, review);
+    const reviewKey = 'review_' + Date.now();
+    await fbSet(`reviews/${reviewKey}`, review);
 
     return res.status(200).json({ ok: true });
 
@@ -55,6 +61,23 @@ module.exports = async (req, res) => {
 
 function authParam() {
   return FIREBASE_SECRET ? `?auth=${FIREBASE_SECRET}` : '';
+}
+
+async function fbPatch(path, data) {
+  return new Promise((resolve, reject) => {
+    const url    = `${FIREBASE_URL}/${path}.json${authParam()}`;
+    const parsed = new URL(url);
+    const body   = JSON.stringify(data);
+    const req    = https.request({
+      hostname: parsed.hostname,
+      path:     parsed.pathname + parsed.search,
+      method:   'PATCH',
+      headers:  { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+    }, r => { let raw = ''; r.on('data', c => raw += c); r.on('end', () => resolve(raw)); });
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
 }
 
 async function fbSet(path, data) {
