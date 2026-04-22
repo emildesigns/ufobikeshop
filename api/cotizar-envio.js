@@ -25,7 +25,7 @@ async function getToken() {
 module.exports = async (req, res) => {
   // ── CORS restringido al dominio propio ──────────────────────────────
   const origin = req.headers.origin || '';
-  const allowed = ['https://ufo-bikeshop.vercel.app'];
+  const allowed = ['https://ufobikeshop.com.ar', 'https://ufo-bikeshop.vercel.app'];
   if (origin && allowed.includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
   }
