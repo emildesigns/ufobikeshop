@@ -61,7 +61,15 @@ module.exports = async (req, res) => {
     for (const item of items) {
       if (!item || !item.id) continue;
       const prod = await fbGet(`products/${item.id}`);
-      if (prod && prod.stock !== null && prod.stock !== undefined) {
+      if (!prod) continue;
+
+      if (item.size && prod.sizes && prod.sizes[item.size] !== undefined) {
+        // Producto con talle
+        const nuevoStock = Math.max(0, Number(prod.sizes[item.size] || 0) - Number(item.qty));
+        await fbPatch(`products/${item.id}/sizes`, { [item.size]: nuevoStock });
+        console.log(`Stock talle: ${prod.name || item.id} talle ${item.size} → ${nuevoStock}`);
+      } else if (prod.stock !== null && prod.stock !== undefined) {
+        // Producto sin talles
         const nuevoStock = Math.max(0, Number(prod.stock) - Number(item.qty));
         await fbPatch(`products/${item.id}`, { stock: nuevoStock });
         console.log(`Stock: ${prod.name || item.id} → ${nuevoStock}`);
