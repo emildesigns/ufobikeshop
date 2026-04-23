@@ -42,7 +42,16 @@ module.exports = async (req, res) => {
     for (const item of items) {
       if (!item?.id) continue;
       const prod = await fbGet(`products/${item.id}`);
-      if (prod && prod.stock !== null && prod.stock !== undefined) {
+      if (!prod) continue;
+
+      if (item.size && prod.sizes && prod.sizes[item.size] !== undefined) {
+        // Devolver stock del talle
+        const stockActual = Number(prod.sizes[item.size] || 0);
+        const qty         = Number(item.qty || 1);
+        const newStock    = stockActual + qty;
+        await fbPatch(`products/${item.id}/sizes`, { [item.size]: newStock });
+        console.log(`Stock talle devuelto: ${prod.name || item.id} talle ${item.size} ${stockActual} + ${qty} → ${newStock}`);
+      } else if (prod.stock !== null && prod.stock !== undefined) {
         const stockActual = Number(prod.stock || 0);
         const qty         = Number(item.qty || 1);
         const newStock    = stockActual + qty;
