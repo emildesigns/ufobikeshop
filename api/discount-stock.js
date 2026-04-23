@@ -27,7 +27,15 @@ module.exports = async (req, res) => {
     for (const item of itemsList) {
       if (!item?.id) continue;
       const prod = await fbGet(`products/${item.id}`);
-      if (prod && prod.stock !== null && prod.stock !== undefined) {
+      if (!prod) continue;
+
+      if (item.size && prod.sizes && prod.sizes[item.size] !== undefined) {
+        // Producto con talle — descontar stock del talle específico
+        const newSizeStock = Math.max(0, Number(prod.sizes[item.size] || 0) - Number(item.qty || 1));
+        await fbPatch(`products/${item.id}/sizes`, { [item.size]: newSizeStock });
+        console.log(`Stock talle descontado: ${prod.name || item.id} talle ${item.size} → ${newSizeStock}`);
+      } else if (prod.stock !== null && prod.stock !== undefined) {
+        // Producto sin talles — descontar stock general
         const newStock = Math.max(0, Number(prod.stock || 0) - Number(item.qty || 1));
         await fbPatch(`products/${item.id}`, { stock: newStock });
         console.log(`Stock descontado: ${prod.name || item.id} → ${newStock}`);
