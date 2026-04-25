@@ -57,7 +57,7 @@ module.exports = async (req, res) => {
       ? '¡PEDIDO REGISTRADO!'
       : '¡GRACIAS POR TU COMPRA!';
     const mensajeComprador = esTransferencia
-      ? `Tu pedido fue registrado correctamente. El pago está PENDIENTE de verificación.\n\nPor favor envianos el comprobante de transferencia por WhatsApp al +54 381 330-4791 o a ufo.bikeshop@outlook.com indicando tu N° de pedido: ${orderId}.\n\nUna vez verificado el pago confirmaremos tu pedido.`
+      ? `Tu pedido fue registrado correctamente. El pago está PENDIENTE de verificación.\n\nPor favor envianos el comprobante de transferencia por WhatsApp al +54 381 330-4791 o a ufobikeshopweb@gmail.com indicando tu N° de pedido: ${orderId}.\n\nUna vez verificado el pago confirmaremos tu pedido.`
       : `Tu pedido fue confirmado. A continuación el detalle:`;
 
     // Colores según estado — naranja para pendiente, cyan para aprobado
