@@ -10,9 +10,11 @@ const CATEGORIES = [
   'componentes',
   'repuestos',
   'accesorios',
+  'lubricantes',
   'indumentaria',
   'protecciones',
-  'mx-enduro'
+  'mx-enduro',
+  'usados'
 ];
 
 // Función para escapar caracteres XML especiales en URLs
