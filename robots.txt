@@ -1,0 +1,12 @@
+# robots.txt — UFO Bike Shop
+# https://ufobikeshop.com.ar
+
+# Permitir a todos los rastreadores acceder a todo el sitio
+User-agent: *
+Allow: /
+
+# Bloquear el panel de admin (no necesitamos que Google indexe esto)
+Disallow: /api/
+
+# Sitemap dinámico — le decimos a Google exactamente dónde está
+Sitemap: https://ufobikeshop.com.ar/api/sitemap
