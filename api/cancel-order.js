@@ -3,7 +3,7 @@ const https = require('https');
 
 const FIREBASE_URL    = process.env.FIREBASE_URL || 'https://ufobikeshop-default-rtdb.firebaseio.com';
 const FIREBASE_SECRET = process.env.FIREBASE_SECRET;
-
+ 
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', 'https://ufobikeshop.com.ar');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
