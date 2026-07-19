@@ -7522,9 +7522,20 @@ setTimeout(() => {
 }, 500);
 </script>
 
-<script src="https://cdn.jsdelivr.net/npm/@cognitiondesk/widget@1/dist/widget.js"
-  data-widget-id="widget_EyPH28gS6oetQv80B8vAYJ6zp3H3_1784415770215"
-  async defer>
+<script>
+  fetch('/api/widget-config')
+    .then(r => r.json())
+    .then(cfg => {
+      if (!cfg.apiKey) return;
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/@cognitiondesk/widget@1/dist/widget.js';
+      s.setAttribute('data-widget-id', cfg.widgetId);
+      s.setAttribute('data-api-key', cfg.apiKey);
+      s.async = true;
+      s.defer = true;
+      document.body.appendChild(s);
+    })
+    .catch(() => {});
 </script>
 </body>
 </html>
