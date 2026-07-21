@@ -6032,10 +6032,10 @@ async function eliminarPedido(orderId) {
 async function devolverStockPedido(orderId) {
   if (!confirm(`¿Cancelar el pedido ${orderId} y devolver los productos al stock?`)) return;
   try {
-    const res  = await fetch('/api/cancel-order', {
+    const res  = await fetch('/api/delete-order', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ orderId }),
+      body:    JSON.stringify({ orderId, action: 'cancel' }),
     });
     const data = await res.json();
 
