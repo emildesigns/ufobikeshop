@@ -6,6 +6,9 @@ const FIREBASE_URL     = process.env.FIREBASE_URL || 'https://ufobikeshop-defaul
 const FIREBASE_SECRET  = process.env.FIREBASE_SECRET;
 const PRODUCTS_API_KEY = process.env.PRODUCTS_API_KEY;
 
+const DEFAULT_LIMIT = 15;
+const MAX_LIMIT     = 50;
+
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -31,11 +34,29 @@ module.exports = async (req, res) => {
       ? Object.values(raw).filter(p => p && p.id && p.name)
       : [];
 
-    const { cat, id } = new URL(req.url, 'http://x').searchParams.size
-      ? Object.fromEntries(new URL(req.url, 'http://x').searchParams)
-      : {};
-    if (id)  products = products.filter(p => String(p.id) === String(id));
+    const params = new URL(req.url, 'http://x').searchParams;
+    const id    = params.get('id');
+    const cat   = params.get('cat');
+    const q     = params.get('q');
+    const limit = Math.min(MAX_LIMIT, Math.max(1, Number(params.get('limit')) || DEFAULT_LIMIT));
+
+    // Búsqueda exacta por id — ignora todo lo demás
+    if (id) products = products.filter(p => String(p.id) === String(id));
+
     if (cat) products = products.filter(p => p.cat === cat);
+
+    if (q) {
+      const needle = normalize(q);
+      const terms  = needle.split(/\s+/).filter(Boolean);
+      products = products
+        .map(p => ({ p, score: matchScore(p, terms) }))
+        .filter(x => x.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .map(x => x.p);
+    }
+
+    const total = products.length;
+    if (!id) products = products.slice(0, limit);
 
     const clean = products.map(p => ({
       id:       p.id,
@@ -55,6 +76,8 @@ module.exports = async (req, res) => {
 
     return res.status(200).json({
       count:     clean.length,
+      total,
+      truncated: total > clean.length,
       updatedAt: new Date().toISOString(),
       products:  clean,
     });
@@ -64,6 +87,27 @@ module.exports = async (req, res) => {
     return res.status(500).json({ error: 'Error al obtener productos' });
   }
 };
+
+// Quita acentos y pasa a minúsculas para comparar sin importar tildes/mayúsculas
+function normalize(str) {
+  return String(str || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '');
+}
+
+// Puntaje simple: suma 1 por cada término que aparece en nombre/desc/detail/categoría,
+// con más peso si aparece en el nombre
+function matchScore(p, terms) {
+  const name = normalize(p.name);
+  const rest = normalize(`${p.desc || ''} ${p.detail || ''} ${p.cat || ''}`);
+  let score = 0;
+  for (const term of terms) {
+    if (name.includes(term)) score += 3;
+    else if (rest.includes(term)) score += 1;
+  }
+  return score;
+}
 
 function fbGet(path) {
   return new Promise((resolve, reject) => {
