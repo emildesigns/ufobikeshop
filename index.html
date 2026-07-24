@@ -3597,7 +3597,7 @@ function shopSearch(query) {
   }
 
   const tokens = tokenizarBusqueda(q);
-  const results = products.filter(p => productoMatchea(p, tokens)).slice(0, 8);
+  const results = products.filter(p => productoMatchea(p, tokens));
 
   // Filtrar la grilla de productos en tiempo real
   renderProducts('todos', q);
@@ -3640,7 +3640,7 @@ function heroSearch(query) {
   if (!q) { dropdown.classList.remove('open'); dropdown.innerHTML = ''; return; }
 
   const tokens = tokenizarBusqueda(q);
-  const results = products.filter(p => productoMatchea(p, tokens)).slice(0, 8);
+  const results = products.filter(p => productoMatchea(p, tokens));
 
   if (!results.length) {
     dropdown.innerHTML = `<div class="search-no-results">Sin resultados para "<strong>${query}</strong>"</div>`;
