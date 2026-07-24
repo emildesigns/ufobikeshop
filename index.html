@@ -3451,9 +3451,7 @@ function tokenizarBusqueda(texto) {
 }
 function productoMatchea(producto, tokensBusqueda) {
   if (!tokensBusqueda.length) return true;
-  const textoProducto = normalizarTexto(
-    [producto.name, producto.desc, producto.cat, producto.detail || ''].join(' ')
-  );
+  const textoProducto = normalizarTexto(producto.name);
   return tokensBusqueda.every(token => {
     if (textoProducto.includes(token)) return true;
     return textoProducto.split(/\s+/).some(w => singularizar(w).includes(token));
