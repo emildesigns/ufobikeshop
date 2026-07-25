@@ -634,6 +634,17 @@
     position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
     color: var(--cyan); font-size: 20px; pointer-events: none; z-index: 1002;
   }
+  .hero-search-icon.clickable {
+    pointer-events: auto; cursor: pointer;
+    padding: 8px; margin: -8px; /* área de toque más grande para mobile */
+  }
+  .search-result-viewall {
+    justify-content: center; cursor: pointer;
+    color: var(--cyan); font-family: var(--font-display);
+    font-size: 0.7rem; letter-spacing: 2px; text-transform: uppercase;
+    padding: 14px 16px;
+  }
+  .search-result-viewall:hover { background: var(--card); }
   .search-results-dropdown {
     position: absolute; top: calc(100% + 8px); left: 0; right: 0;
     background: var(--dark); border: 1px solid var(--border);
@@ -2017,9 +2028,10 @@ fbq('track', 'PageView');
       <div class="hero-search" id="hero-search-wrap">
         <input type="text" id="hero-search-input" placeholder="¿Qué estás buscando?"
           oninput="heroSearch(this.value)"
-          onkeydown="if(event.key==='Escape')closeHeroSearch()"
-          autocomplete="off">
-        <span class="hero-search-icon">🔍</span>
+          onkeydown="if(event.key==='Escape')closeHeroSearch(); if(event.key==='Enter'){event.preventDefault();openHeroSearchResults();}"
+          autocomplete="off"
+          enterkeyhint="search">
+        <span class="hero-search-icon clickable" onclick="openHeroSearchResults()" role="button" aria-label="Ver todos los resultados" tabindex="0">🔍</span>
         <div class="search-results-dropdown" id="search-dropdown"></div>
       </div>
       <div class="hero-btns">
@@ -3661,7 +3673,10 @@ function heroSearch(query) {
         </div>
         <div class="search-result-price">${formatPrice(p.price)}</div>
       </div>`;
-  }).join('');
+  }).join('') + `
+    <div class="search-result-item search-result-viewall" onclick="openHeroSearchResults()">
+      VER TODOS LOS RESULTADOS (${results.length}) →
+    </div>`;
 
   dropdown.classList.add('open');
 }
@@ -3670,6 +3685,17 @@ function goToProduct(id) {
   closeHeroSearch();
   showPage('shop');
   setTimeout(() => openProductModal(id), 100);
+}
+
+// Abre la tienda en una pestaña nueva, filtrada con la búsqueda actual del hero
+// (mismo handler para ENTER y para el click en la lupa / "ver todos los resultados")
+function openHeroSearchResults() {
+  const input = document.getElementById('hero-search-input');
+  const query = input ? input.value.trim() : '';
+  if (!query) return;
+  const url = window.location.pathname + '?buscar=' + encodeURIComponent(query);
+  window.open(url, '_blank', 'noopener');
+  closeHeroSearch();
 }
 
 function closeHeroSearch() {
@@ -5676,8 +5702,14 @@ async function loadProductsFromFirebase() {
 
     nextId = Math.max(...products.map(p => Number(p.id)), 0) + 1;
 
-    // Si hay una categoría pendiente desde la URL, aplicarla; si no, render normal
-    if (window._pendingCatFromUrl) {
+    // Si hay una búsqueda o categoría pendiente desde la URL, aplicarla; si no, render normal
+    if (window._pendingSearchFromUrl) {
+      const buscar = window._pendingSearchFromUrl;
+      window._pendingSearchFromUrl = null; // consumirla solo una vez
+      const shopInput = document.getElementById('shop-search-input');
+      if (shopInput) shopInput.value = buscar;
+      renderProducts('todos', buscar);
+    } else if (window._pendingCatFromUrl) {
       const cat = window._pendingCatFromUrl;
       window._pendingCatFromUrl = null; // consumirla solo una vez
       filterCat(cat, null, false);
@@ -7434,6 +7466,24 @@ initFirebaseAuth();
   } catch (e) {
     // si algo falla, no rompe la página
     console.warn('No se pudo aplicar categoría desde URL:', e);
+  }
+})();
+
+// ─── Detectar parámetro ?buscar= en la URL al cargar ───
+// Lo genera el buscador del home cuando abrís los resultados en una pestaña nueva
+(function aplicarBusquedaDesdeUrl() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const buscar = params.get('buscar');
+    if (buscar) {
+      window._pendingSearchFromUrl = buscar;
+      showPage('shop');
+      const shopInput = document.getElementById('shop-search-input');
+      if (shopInput) shopInput.value = buscar;
+      renderProducts('todos', buscar);
+    }
+  } catch (e) {
+    console.warn('No se pudo aplicar búsqueda desde URL:', e);
   }
 })();
 
