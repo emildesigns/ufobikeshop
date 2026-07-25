@@ -7,7 +7,7 @@ const FIREBASE_SECRET  = process.env.FIREBASE_SECRET;
 const PRODUCTS_API_KEY = process.env.PRODUCTS_API_KEY;
 
 const DEFAULT_LIMIT = 15;
-const MAX_LIMIT     = 50;
+const MAX_LIMIT     = 200;
 
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -38,7 +38,8 @@ module.exports = async (req, res) => {
     const id    = params.get('id');
     const cat   = params.get('cat');
     const q     = params.get('q');
-    const limit = Math.min(MAX_LIMIT, Math.max(1, Number(params.get('limit')) || DEFAULT_LIMIT));
+    const limit  = Math.min(MAX_LIMIT, Math.max(1, Number(params.get('limit')) || DEFAULT_LIMIT));
+    const offset = Math.max(0, Number(params.get('offset')) || 0);
 
     // Búsqueda exacta por id — ignora todo lo demás
     if (id) products = products.filter(p => String(p.id) === String(id));
@@ -56,7 +57,7 @@ module.exports = async (req, res) => {
     }
 
     const total = products.length;
-    if (!id) products = products.slice(0, limit);
+    if (!id) products = products.slice(offset, offset + limit);
 
     const clean = products.map(p => ({
       id:       p.id,
@@ -77,7 +78,10 @@ module.exports = async (req, res) => {
     return res.status(200).json({
       count:     clean.length,
       total,
-      truncated: total > clean.length,
+      limit,
+      offset,
+      hasMore:   offset + clean.length < total,
+      truncated: total > clean.length, // deprecado: usar hasMore
       updatedAt: new Date().toISOString(),
       products:  clean,
     });
