@@ -3277,6 +3277,10 @@ fbq('track', 'PageView');
 </div>
 
 <script>
+// Guardamos el hash con el que llegó la página ANTES de que cualquier otra cosa
+// (como el history.replaceState de más abajo) lo pise con '#home'.
+const _initialHash = window.location.hash;
+
 // ─── CURSOR (solo desktop) ───
 const cursor = document.getElementById('cursor');
 // ─── HERO BACKGROUND IMAGE ───
@@ -7612,6 +7616,27 @@ initFirebaseAuth();
     console.warn('No se pudo aplicar producto desde URL:', e);
     const loadingOv = document.getElementById('product-loading-overlay');
     if (loadingOv) loadingOv.style.display = 'none';
+  }
+})();
+
+// ─── Detectar #hash en la URL al cargar (fallback) ───
+// Al navegar la SPA, la URL queda como #shop, #about, etc. Si alguien copia
+// ese link y lo pega en otra pestaña, antes siempre caía en Home porque nada
+// leía el hash al arrancar (solo se manejaban los ?cat=, ?producto=, etc.).
+// Solo actúa si ningún otro parámetro de arriba ya se hizo cargo de navegar.
+(function aplicarHashDesdeUrl() {
+  try {
+    const pageHomeEl = document.getElementById('page-home');
+    const siguEnHome = pageHomeEl && pageHomeEl.classList.contains('active');
+    if (!siguEnHome) return; // otro handler (cat/producto/buscar/page) ya navegó
+
+    const hash = _initialHash.replace('#', '');
+    const validPages = ['shop', 'about', 'service', 'admin', 'privacy'];
+    if (validPages.includes(hash)) {
+      showPage(hash);
+    }
+  } catch (e) {
+    console.warn('No se pudo aplicar la página desde el hash:', e);
   }
 })();
 
