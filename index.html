@@ -1975,8 +1975,8 @@ fbq('track', 'PageView');
   <ul class="nav-links">
     <li><a onclick="showPage('home')" class="active" id="nav-home">Inicio</a></li>
     <li><a onclick="showPage('shop')" id="nav-shop">Tienda</a></li>
-    <li><a onclick="showPage('about')" id="nav-about">Nosotros</a></li>
-    <li><a onclick="showPage('service')" id="nav-service">Servicio Técnico</a></li>
+    <li><a href="/?page=about" onclick="showPage('about');return false;" id="nav-about">Nosotros</a></li>
+    <li><a href="/?page=service" onclick="showPage('service');return false;" id="nav-service">Servicio Técnico</a></li>
     <li><a onclick="showPage('help')" id="nav-help">Ayuda</a></li>
     <li><a onclick="showPage('admin')" id="nav-admin">Admin</a></li>
   </ul>
@@ -2006,8 +2006,8 @@ fbq('track', 'PageView');
 <div id="mobile-nav-drawer" style="position:fixed;top:0;right:0;bottom:0;width:260px;background:var(--dark);border-left:1px solid var(--border);z-index:1900;transform:translateX(100%);transition:transform 0.3s ease;padding:80px 0 40px;display:flex;flex-direction:column;gap:4px">
   <a onclick="showPage('home');toggleMobileMenu()" style="padding:16px 28px;color:var(--muted);font-family:var(--font-display);font-size:0.65rem;letter-spacing:2px;text-decoration:none;border-bottom:1px solid var(--border);cursor:auto">🏠 INICIO</a>
   <a onclick="showPage('shop');toggleMobileMenu()" style="padding:16px 28px;color:var(--muted);font-family:var(--font-display);font-size:0.65rem;letter-spacing:2px;text-decoration:none;border-bottom:1px solid var(--border);cursor:auto">🛒 TIENDA</a>
-  <a onclick="showPage('service');toggleMobileMenu()" style="padding:16px 28px;color:var(--muted);font-family:var(--font-display);font-size:0.65rem;letter-spacing:2px;text-decoration:none;border-bottom:1px solid var(--border);cursor:auto">🔧 SERVICIO TÉCNICO</a>
-  <a onclick="showPage('about');toggleMobileMenu()" style="padding:16px 28px;color:var(--muted);font-family:var(--font-display);font-size:0.65rem;letter-spacing:2px;text-decoration:none;border-bottom:1px solid var(--border);cursor:auto">👽 NOSOTROS</a>
+  <a href="/?page=service" onclick="showPage('service');toggleMobileMenu();return false;" style="padding:16px 28px;color:var(--muted);font-family:var(--font-display);font-size:0.65rem;letter-spacing:2px;text-decoration:none;border-bottom:1px solid var(--border);cursor:auto">🔧 SERVICIO TÉCNICO</a>
+  <a href="/?page=about" onclick="showPage('about');toggleMobileMenu();return false;" style="padding:16px 28px;color:var(--muted);font-family:var(--font-display);font-size:0.65rem;letter-spacing:2px;text-decoration:none;border-bottom:1px solid var(--border);cursor:auto">👽 NOSOTROS</a>
   <a onclick="showPage('help');toggleMobileMenu()" style="padding:16px 28px;color:var(--muted);font-family:var(--font-display);font-size:0.65rem;letter-spacing:2px;text-decoration:none;border-bottom:1px solid var(--border);cursor:auto">❓ AYUDA</a>
   <a onclick="showPage('admin');toggleMobileMenu()" style="padding:16px 28px;color:var(--muted);font-family:var(--font-display);font-size:0.65rem;letter-spacing:2px;text-decoration:none;border-bottom:1px solid var(--border);cursor:auto">⚙️ ADMIN</a>
 </div>
@@ -5048,6 +5048,53 @@ function aplicarSeoProducto(p) {
   }
 }
 
+// ─── SEO para páginas de contenido propio (Nosotros / Servicio Técnico) ───
+// Les da title/description/canonical únicos y una URL indexable (?page=xxx),
+// en vez de compartir siempre el title/description genérico de la home.
+const PAGE_SEO = {
+  about: {
+    title: 'Nosotros — UFO Bike Shop | Bicicletería en Yerba Buena, Tucumán',
+    desc:  'Conocé UFO Bike Shop: bicicletería especializada en Yerba Buena, Tucumán. Calidad, asesoría experta y envíos a todo el país desde 9 de Julio 718.'
+  },
+  service: {
+    title: 'Servicio Técnico de Bicicletas en Yerba Buena, Tucumán | UFO Bike Shop',
+    desc:  'Técnicos especializados en mantenimiento y reparación de bicicletas en Yerba Buena, Tucumán. Service completo, armado de bicis y ruedas a medida. Pedí tu turno por WhatsApp.'
+  }
+};
+
+function aplicarSeoPagina(pageKey) {
+  const seo = PAGE_SEO[pageKey];
+  if (!seo) return;
+  if (!_seoBackup) {
+    _seoBackup = {
+      title: document.title,
+      description: document.querySelector('meta[name="description"]')?.getAttribute('content') || '',
+      ogTitle: document.querySelector('meta[property="og:title"]')?.getAttribute('content') || '',
+      ogDesc: document.querySelector('meta[property="og:description"]')?.getAttribute('content') || '',
+      ogUrl: document.querySelector('meta[property="og:url"]')?.getAttribute('content') || '',
+      ogImage: document.querySelector('meta[property="og:image"]')?.getAttribute('content') || '',
+      twTitle: document.querySelector('meta[name="twitter:title"]')?.getAttribute('content') || '',
+      twDesc: document.querySelector('meta[name="twitter:description"]')?.getAttribute('content') || '',
+      twImage: document.querySelector('meta[name="twitter:image"]')?.getAttribute('content') || '',
+      canonical: document.querySelector('link[rel="canonical"]')?.getAttribute('href') || '',
+      url: window.location.pathname + window.location.search
+    };
+  }
+  const pageUrl = `https://ufobikeshop.com.ar/?page=${pageKey}`;
+  document.title = seo.title;
+  const setMeta = (selector, value) => {
+    const el = document.querySelector(selector);
+    if (el) el.setAttribute(el.tagName === 'LINK' ? 'href' : 'content', value);
+  };
+  setMeta('meta[name="description"]', seo.desc);
+  setMeta('meta[property="og:title"]', seo.title);
+  setMeta('meta[property="og:description"]', seo.desc);
+  setMeta('meta[property="og:url"]', pageUrl);
+  setMeta('meta[name="twitter:title"]', seo.title);
+  setMeta('meta[name="twitter:description"]', seo.desc);
+  setMeta('link[rel="canonical"]', pageUrl);
+}
+
 function restaurarSeoOriginal() {
   if (!_seoBackup) return;
   document.title = _seoBackup.title;
@@ -6713,7 +6760,8 @@ function addProduct() {
       // Para el array: si hay fotos cargadas usarlas, si no mantener el array viejo
       const photosFinal = photosArr.length > 0 ? (photosArr.length > 3 ? photosArr : null) : (products[idx].photos || null);
       const sizesFinal  = cleanSizesOrNull(currentSizes);
-      products[idx] = { ...products[idx], name, desc, detail, cat, price, oldPrice, emoji, badge, stock, weight, dims, sizes: sizesFinal, photo: photoFinal, photo2: photo2Final, photo3: photo3Final, photos: photosFinal };
+      // updatedAt: para que el sitemap pueda declarar un lastmod real (no siempre "hoy")
+      products[idx] = { ...products[idx], name, desc, detail, cat, price, oldPrice, emoji, badge, stock, weight, dims, sizes: sizesFinal, photo: photoFinal, photo2: photo2Final, photo3: photo3Final, photos: photosFinal, updatedAt: new Date().toISOString() };
       productoAGuardar = products[idx];
       const cartIdx = cart.findIndex(i => i.id === editingId);
       if (cartIdx !== -1) cart[cartIdx] = { ...cart[cartIdx], name, desc, cat, price, oldPrice, emoji, badge, stock, weight, dims, sizes: sizesFinal, photo: photoFinal, photo2: photo2Final, photo3: photo3Final };
@@ -6724,7 +6772,7 @@ function addProduct() {
     document.getElementById('cancel-edit-btn').style.display = 'none';
     showToast('✓ PRODUCTO ACTUALIZADO');
   } else {
-    const nuevo = { id: nextId++, name, desc, detail, cat, price, oldPrice, emoji, badge, stock, weight, dims, sizes: cleanSizesOrNull(currentSizes), photo, photo2, photo3, photos };
+    const nuevo = { id: nextId++, name, desc, detail, cat, price, oldPrice, emoji, badge, stock, weight, dims, sizes: cleanSizesOrNull(currentSizes), photo, photo2, photo3, photos, updatedAt: new Date().toISOString() };
     products.push(nuevo);
     productoAGuardar = nuevo;
     showToast('✓ PRODUCTO AGREGADO');
@@ -6994,9 +7042,19 @@ function showPage(name) {
   if (name === 'shop') renderProducts();
   if (name === 'admin') { renderAdminList(); renderOrders(); renderBannerAdmin(); actualizarStatsMigracion(); }
 
+  // SEO dinámico: Nosotros y Servicio Técnico tienen title/description propios
+  // (así son indexables como páginas propias, no genéricas de la home);
+  // para el resto, restaurar los meta tags originales si estaban pisados.
+  if (name === 'about' || name === 'service') {
+    aplicarSeoPagina(name);
+  } else if (_seoBackup) {
+    restaurarSeoOriginal();
+  }
+
   // Agregar entrada al historial solo si cambió de página
+  const hash = (name === 'about' || name === 'service') ? `?page=${name}#${name}` : '#' + name;
   if (!history.state || history.state.page !== name) {
-    history.pushState({ page: name }, '', '#' + name);
+    history.pushState({ page: name }, '', hash);
   }
 }
 
@@ -7015,6 +7073,12 @@ window.addEventListener('popstate', e => {
   window.scrollTo(0, 0);
   if (target === 'shop') renderProducts();
   if (target === 'admin' && currentUser) { renderAdminList(); renderOrders(); actualizarStatsMigracion(); renderGalleryAdmin(); }
+
+  if (target === 'about' || target === 'service') {
+    aplicarSeoPagina(target);
+  } else if (_seoBackup) {
+    restaurarSeoOriginal();
+  }
 });
 
 // Inicializar historial con la página actual al cargar
@@ -7484,6 +7548,21 @@ initFirebaseAuth();
     }
   } catch (e) {
     console.warn('No se pudo aplicar búsqueda desde URL:', e);
+  }
+})();
+
+// ─── Detectar parámetro ?page= en la URL al cargar ───
+// Para que "Nosotros" y "Servicio Técnico" sean URLs propias indexables
+// (en vez de vivir solo detrás de un #hash que Google no indexa por separado)
+(function aplicarPaginaDesdeUrl() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const page = params.get('page');
+    if (page === 'about' || page === 'service') {
+      showPage(page);
+    }
+  } catch (e) {
+    console.warn('No se pudo aplicar página desde URL:', e);
   }
 })();
 
