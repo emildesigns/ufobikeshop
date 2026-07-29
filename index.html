@@ -4828,12 +4828,22 @@ function toggleCart() {
   document.getElementById('cart-overlay').classList.toggle('open');
   const isOpen = document.getElementById('cart-sidebar').classList.toggle('open');
   document.body.style.overflow = isOpen ? 'hidden' : '';
+  setCognitionWidgetVisible(!isOpen);
   if (isOpen) {
     // Recargar stock actualizado de Firebase al abrir el carrito
     loadProductsFromFirebase().then(() => updateCart());
   } else {
     updateCart();
   }
+}
+
+// Oculta/muestra el widget de CognitionDesk (burbuja de chat) mientras el
+// carrito está abierto, para que no tape los botones ni distraiga en el
+// checkout. El widget se monta como un <div> con shadow DOM directo bajo
+// <body>, sin id/clase propia, así que lo identificamos por eso.
+function setCognitionWidgetVisible(visible) {
+  const host = [...document.querySelectorAll('body > div')].find(el => el.shadowRoot);
+  if (host) host.style.display = visible ? '' : 'none';
 }
 
 // ════════════════════════════════════════════════════
