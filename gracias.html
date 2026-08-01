@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JJYNNMNL6T"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-JJYNNMNL6T');
+</script>
 <!-- Google Tag Manager -->
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
 new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -157,6 +165,23 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             : (Array.isArray(order.items) ? order.items : Object.values(order.items || {}));
         } catch(e) { itemsForTracking = []; }
 
+        const gaItems = itemsForTracking.map(it => ({
+          item_id: it.id || it.sku || '',
+          item_name: it.nombre || it.name || '',
+          price: it.precio || it.price || 0,
+          quantity: it.cantidad || it.quantity || 1,
+        }));
+
+        if (typeof gtag === 'function') {
+          gtag('event', 'purchase', {
+            transaction_id: orderId,
+            value: order.total || 0,
+            shipping: order.shippingCost || 0,
+            currency: 'ARS',
+            items: gaItems,
+          });
+        }
+
         window.dataLayer = window.dataLayer || [];
         window.dataLayer.push({
           event: 'purchase',
@@ -165,12 +190,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             value: order.total || 0,
             shipping: order.shippingCost || 0,
             currency: 'ARS',
-            items: itemsForTracking.map(it => ({
-              item_id: it.id || it.sku || '',
-              item_name: it.nombre || it.name || '',
-              price: it.precio || it.price || 0,
-              quantity: it.cantidad || it.quantity || 1,
-            })),
+            items: gaItems,
           },
         });
         sessionStorage.setItem(purchaseFlag, '1');
