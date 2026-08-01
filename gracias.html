@@ -1,6 +1,13 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-TJVF4W4P');</script>
+<!-- End Google Tag Manager -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>¡Gracias por tu compra! — UFO Bike Shop</title>
@@ -64,6 +71,10 @@
 </style>
 </head>
 <body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-TJVF4W4P"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
 <div class="container">
   <div class="check-icon">✅</div>
   <h1>¡GRACIAS POR TU <span>COMPRA!</span></h1>
@@ -134,6 +145,37 @@
     // 1. Leer el pedido de Firebase (permitido por las reglas $orderId)
     const order = await fbGet(`orders/${orderId}`);
     if (!order) { console.warn('Pedido no encontrado:', orderId); return; }
+
+    // ─── Evento de compra para GA4/Ads (vía GTM), una sola vez por pedido ───
+    const purchaseFlag = `ufo_purchase_tracked_${orderId}`;
+    if (!sessionStorage.getItem(purchaseFlag)) {
+      try {
+        let itemsForTracking = [];
+        try {
+          itemsForTracking = typeof order.items === 'string'
+            ? JSON.parse(order.items)
+            : (Array.isArray(order.items) ? order.items : Object.values(order.items || {}));
+        } catch(e) { itemsForTracking = []; }
+
+        window.dataLayer = window.dataLayer || [];
+        window.dataLayer.push({
+          event: 'purchase',
+          ecommerce: {
+            transaction_id: orderId,
+            value: order.total || 0,
+            shipping: order.shippingCost || 0,
+            currency: 'ARS',
+            items: itemsForTracking.map(it => ({
+              item_id: it.id || it.sku || '',
+              item_name: it.nombre || it.name || '',
+              price: it.precio || it.price || 0,
+              quantity: it.cantidad || it.quantity || 1,
+            })),
+          },
+        });
+        sessionStorage.setItem(purchaseFlag, '1');
+      } catch(e) { console.warn('Error al enviar evento de compra:', e.message); }
+    }
 
     // 2. Actualizar stock y estado via servidor (sin restricciones de auth)
     if (!order.stockDescontado || order.paymentStatus !== 'approved') {
