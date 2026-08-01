@@ -674,6 +674,48 @@
   .search-result-price { font-family: var(--font-display); font-size: 0.85rem; color: var(--cyan); flex-shrink: 0; }
   .search-no-results { padding: 20px; text-align: center; color: var(--muted); font-size: 0.85rem; }
   .hero-btns { display: flex; gap: 16px; justify-content: center; animation: fadeUp 0.8s 0.3s ease both; }
+  /* ─── Ciclo automático: ocultar hero y mostrar ofertas ─── */
+  .hero-main-content {
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .hero-main-content.hero-content-hidden {
+    opacity: 0;
+    transform: translateY(-18px);
+    pointer-events: none;
+  }
+  .hero-flash-grid {
+    position: absolute; inset: 0;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    align-items: center; justify-items: center;
+    gap: 18px;
+    max-width: 640px; margin: 0 auto;
+    padding: 0 20px;
+    opacity: 0; visibility: hidden;
+    transition: opacity 0.6s ease, visibility 0s linear 0.6s;
+    pointer-events: none;
+  }
+  .hero-flash-grid.hero-flash-visible {
+    opacity: 1; visibility: visible;
+    transition: opacity 0.6s ease 0.15s;
+    pointer-events: auto;
+  }
+  .hero-flash-item { width: 100%; max-width: 150px; text-align: center; cursor: pointer; }
+  .hero-flash-img {
+    width: 100%; aspect-ratio: 1 / 1;
+    background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden; margin-bottom: 8px;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .hero-flash-item:hover .hero-flash-img { border-color: var(--cyan); transform: translateY(-3px); }
+  .hero-flash-img img { width: 100%; height: 100%; object-fit: contain; padding: 10px; box-sizing: border-box; }
+  .hero-flash-emoji { font-size: 2.2rem; }
+  .hero-flash-name {
+    font-size: 0.72rem; color: #fff; font-weight: 600;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .hero-flash-price { font-family: var(--font-display); font-size: 0.78rem; color: var(--cyan); margin-top: 2px; }
   .btn-primary {
     background: var(--cyan); color: var(--black);
     padding: 14px 36px; border: none; border-radius: 4px;
@@ -1676,6 +1718,10 @@
     .hero-sub { font-size: 0.85rem; letter-spacing: 1px; margin-bottom: 32px; }
     .hero-tag { font-size: 0.5rem; letter-spacing: 3px; margin-bottom: 20px; }
     .hero-btns { flex-direction: column; align-items: center; gap: 12px; }
+    .hero-flash-grid { grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 0 12px; }
+    .hero-flash-item { max-width: 100px; }
+    .hero-flash-name { font-size: 0.62rem; }
+    .hero-flash-price { font-size: 0.68rem; }
     .btn-primary, .btn-outline { width: 100%; max-width: 280px; padding: 14px 20px; font-size: 0.6rem; }
 
     /* ── STATS ── */
@@ -2022,23 +2068,28 @@ fbq('track', 'PageView');
     </div>
     <div class="hero-grid"></div>
     <div class="hero-content">
-      <div class="hero-tag">🛸 YERBA BUENA · TUCUMÁN · ARGENTINA</div>
-      <h1>UFO<br><span>BIKE SHOP</span></h1>
-      <p class="hero-sub">Un lugar, todo lo que necesitás.</p>
-      <div class="hero-search" id="hero-search-wrap">
-        <input type="text" id="hero-search-input" placeholder="¿Qué estás buscando?"
-          oninput="heroSearch(this.value)"
-          onkeydown="if(event.key==='Escape')closeHeroSearch(); if(event.key==='Enter'){event.preventDefault();openHeroSearchResults();}"
-          autocomplete="off"
-          enterkeyhint="search">
-        <span class="hero-search-icon clickable" onclick="openHeroSearchResults()" role="button" aria-label="Ver todos los resultados" tabindex="0">🔍</span>
-        <div class="search-results-dropdown" id="search-dropdown"></div>
+      <div class="hero-main-content" id="hero-main-content">
+        <div class="hero-tag">🛸 YERBA BUENA · TUCUMÁN · ARGENTINA</div>
+        <h1>UFO<br><span>BIKE SHOP</span></h1>
+        <p class="hero-sub">Un lugar, todo lo que necesitás.</p>
+        <div class="hero-search" id="hero-search-wrap">
+          <input type="text" id="hero-search-input" placeholder="¿Qué estás buscando?"
+            oninput="heroSearch(this.value); cancelHeroFlashCycle();"
+            onfocus="cancelHeroFlashCycle()"
+            onblur="handleHeroSearchBlur(this)"
+            onkeydown="if(event.key==='Escape')closeHeroSearch(); if(event.key==='Enter'){event.preventDefault();openHeroSearchResults();}"
+            autocomplete="off"
+            enterkeyhint="search">
+          <span class="hero-search-icon clickable" onclick="openHeroSearchResults()" role="button" aria-label="Ver todos los resultados" tabindex="0">🔍</span>
+          <div class="search-results-dropdown" id="search-dropdown"></div>
+        </div>
+        <div class="hero-btns">
+          <button class="btn-primary" onclick="showPage('shop')">VER PRODUCTOS</button>
+          <button class="btn-outline" onclick="showPage('service')">🔧 SERVICIO TÉCNICO</button>
+          <button class="btn-outline" onclick="showPage('about')">NOSOTROS</button>
+        </div>
       </div>
-      <div class="hero-btns">
-        <button class="btn-primary" onclick="showPage('shop')">VER PRODUCTOS</button>
-        <button class="btn-outline" onclick="showPage('service')">🔧 SERVICIO TÉCNICO</button>
-        <button class="btn-outline" onclick="showPage('about')">NOSOTROS</button>
-      </div>
+      <div class="hero-flash-grid" id="hero-flash-grid"></div>
     </div>
   </section>
   <div class="stats-compact">
@@ -3709,6 +3760,83 @@ function closeHeroSearch() {
   dropdown.innerHTML = '';
   if (input) input.value = '';
 }
+
+// ─── HERO: ciclo automático que oculta el contenido y muestra ofertas ───
+let heroFlashTimer = null;
+
+function scheduleHeroFlashHide() {
+  clearTimeout(heroFlashTimer);
+  heroFlashTimer = setTimeout(showHeroFlashGrid, 6000);
+}
+
+// Cancela el conteo (ej: el usuario tocó el buscador) para darle tiempo a buscar
+function cancelHeroFlashCycle() {
+  clearTimeout(heroFlashTimer);
+  heroFlashTimer = null;
+}
+
+// Al salir del buscador sin escribir nada, retomar el ciclo normal
+function handleHeroSearchBlur(input) {
+  if (!input.value.trim()) scheduleHeroFlashHide();
+}
+
+function showHeroFlashGrid() {
+  const content = document.getElementById('hero-main-content');
+  const grid    = document.getElementById('hero-flash-grid');
+  if (!content || !grid) return;
+
+  const ofertas = products.filter(p => p.badge && p.badge.toUpperCase().includes('OFERTA'));
+  const pool    = ofertas.length ? ofertas : products;
+  if (!pool.length) { scheduleHeroFlashHide(); return; }
+
+  const picks = [...pool].sort(() => Math.random() - 0.5).slice(0, 6);
+
+  grid.innerHTML = picks.map(p => {
+    const img = p.photo
+      ? `<img src="${cldUrl(p.photo, 'card')}" alt="${p.name}" loading="lazy">`
+      : `<span class="hero-flash-emoji">${p.emoji || '🚲'}</span>`;
+    return `
+      <div class="hero-flash-item" onclick="goToProduct(${p.id})">
+        <div class="hero-flash-img">${img}</div>
+        <div class="hero-flash-name">${p.name}</div>
+        <div class="hero-flash-price">${formatPrice(p.price)}</div>
+      </div>`;
+  }).join('');
+
+  content.classList.add('hero-content-hidden');
+  grid.classList.add('hero-flash-visible');
+
+  heroFlashTimer = setTimeout(hideHeroFlashGrid, 6000);
+}
+
+function hideHeroFlashGrid() {
+  const content = document.getElementById('hero-main-content');
+  const grid    = document.getElementById('hero-flash-grid');
+  if (!content || !grid) return;
+
+  content.classList.remove('hero-content-hidden');
+  grid.classList.remove('hero-flash-visible');
+
+  scheduleHeroFlashHide();
+}
+
+// Al salir de la home, apagar el ciclo y dejar el hero en su estado visible normal
+function pauseHeroFlashCycle() {
+  clearTimeout(heroFlashTimer);
+  heroFlashTimer = null;
+  const content = document.getElementById('hero-main-content');
+  const grid    = document.getElementById('hero-flash-grid');
+  if (content) content.classList.remove('hero-content-hidden');
+  if (grid) grid.classList.remove('hero-flash-visible');
+}
+
+// Al volver a la home, arrancar el ciclo de nuevo desde cero
+function resumeHeroFlashCycle() {
+  pauseHeroFlashCycle();
+  scheduleHeroFlashHide();
+}
+
+scheduleHeroFlashHide();
 
 // Cerrar al hacer clic fuera
 document.addEventListener('click', e => {
@@ -7055,6 +7183,7 @@ function showPage(name) {
   window.scrollTo(0, 0);
   if (name === 'shop') renderProducts();
   if (name === 'admin') { renderAdminList(); renderOrders(); renderBannerAdmin(); actualizarStatsMigracion(); }
+  if (name === 'home') resumeHeroFlashCycle(); else pauseHeroFlashCycle();
 
   // SEO dinámico: Nosotros y Servicio Técnico tienen title/description propios
   // (así son indexables como páginas propias, no genéricas de la home);
@@ -7087,6 +7216,7 @@ window.addEventListener('popstate', e => {
   window.scrollTo(0, 0);
   if (target === 'shop') renderProducts();
   if (target === 'admin' && currentUser) { renderAdminList(); renderOrders(); actualizarStatsMigracion(); renderGalleryAdmin(); }
+  if (target === 'home') resumeHeroFlashCycle(); else pauseHeroFlashCycle();
 
   if (target === 'about' || target === 'service') {
     aplicarSeoPagina(target);
