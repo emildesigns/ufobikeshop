@@ -9,6 +9,19 @@
   gtag('js', new Date());
   gtag('config', 'G-JJYNNMNL6T');
 </script>
+<!-- Google Customer Reviews: carga la librería (el render se dispara después, con los datos reales del pedido) -->
+<script src="https://apis.google.com/js/platform.js?onload=renderOptIn" async defer></script>
+<script>
+  window.renderOptIn = function() {
+    window.gapi.load('surveyoptin', function() {
+      window._surveyOptInReady = true;
+      if (window._pendingSurveyData) {
+        window.gapi.surveyoptin.render(window._pendingSurveyData);
+        window._pendingSurveyData = null;
+      }
+    });
+  };
+</script>
 <!-- Google Tag Manager -->
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
 new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -154,6 +167,32 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     const order = await fbGet(`orders/${orderId}`);
     if (!order) { console.warn('Pedido no encontrado:', orderId); return; }
 
+    let buyerParsed = null;
+    try {
+      buyerParsed = typeof order.buyer === 'string' ? JSON.parse(order.buyer) : order.buyer;
+    } catch(e) { buyerParsed = null; }
+
+    // ─── Reseñas de Clientes en Google: encuesta de opt-in con los datos reales del pedido ───
+    if (buyerParsed?.email) {
+      const diasEntrega = order.shipping?.id === 'retiro' ? 3 : 7;
+      const base = order.createdAt ? new Date(order.createdAt) : new Date();
+      base.setDate(base.getDate() + diasEntrega);
+
+      const surveyData = {
+        merchant_id: 5809350819,
+        order_id: orderId,
+        email: buyerParsed.email,
+        delivery_country: 'AR',
+        estimated_delivery_date: base.toISOString().split('T')[0],
+      };
+
+      if (window._surveyOptInReady) {
+        window.gapi.surveyoptin.render(surveyData);
+      } else {
+        window._pendingSurveyData = surveyData;
+      }
+    }
+
     // ─── Evento de compra para GA4/Ads (vía GTM), una sola vez por pedido ───
     const purchaseFlag = `ufo_purchase_tracked_${orderId}`;
     if (!sessionStorage.getItem(purchaseFlag)) {
@@ -225,13 +264,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             ? JSON.parse(order.items)
             : (Array.isArray(order.items) ? order.items : Object.values(order.items || {}));
         } catch(e) { itemsParsed = []; }
-
-        let buyerParsed = null;
-        try {
-          buyerParsed = typeof order.buyer === 'string'
-            ? JSON.parse(order.buyer)
-            : order.buyer;
-        } catch(e) { buyerParsed = null; }
 
         const emailRes = await fetch('/api/send-notification', {
           method:  'POST',
