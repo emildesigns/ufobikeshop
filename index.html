@@ -2883,6 +2883,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           <p class="form-title" id="taller-form-mode-tag" style="margin-bottom:16px">NUEVA ORDEN DE SERVICIO</p>
 
           <div class="form-group">
+            <label>FECHA DE INGRESO</label>
+            <input type="date" id="t-fecha">
+          </div>
+          <div class="form-group">
             <label>NOMBRE DEL CLIENTE</label>
             <input type="text" id="t-cliente-nombre" placeholder="Ej: Juan Pérez">
           </div>
@@ -6397,6 +6401,8 @@ const TALLER_ESTADOS = {
 };
 
 async function cargarTaller() {
+  const fechaEl = document.getElementById('t-fecha');
+  if (fechaEl && !fechaEl.value) fechaEl.value = new Date().toISOString().split('T')[0];
   const data = await fbGet('taller');
   tallerOrdenes = data && !data.error ? Object.values(data) : [];
   renderTallerListView();
@@ -6480,11 +6486,14 @@ async function guardarOrdenTaller() {
   }
 
   const numero = editingTallerId || generarNumeroTaller();
-  const existente = editingTallerId ? tallerOrdenes.find(o => o.numero === editingTallerId) : null;
+  const fechaInput = document.getElementById('t-fecha').value; // YYYY-MM-DD
+  const fechaIngreso = fechaInput
+    ? new Date(`${fechaInput}T12:00:00`).toISOString()
+    : new Date().toISOString();
 
   const data = {
     numero,
-    createdAt:      existente?.createdAt || new Date().toISOString(),
+    createdAt:      fechaIngreso,
     updatedAt:      new Date().toISOString(),
     estado:         document.getElementById('t-estado').value,
     cliente: {
@@ -6505,6 +6514,8 @@ async function guardarOrdenTaller() {
   if (!result) { showToast('⚠ Error al guardar la orden'); return; }
 
   showToast(editingTallerId ? '✓ ORDEN ACTUALIZADA' : `✓ ORDEN ${numero} CREADA`);
+  // Dejar la solapa de este cliente abierta para ver la orden recién guardada
+  tallerGruposAbiertos.add(telefono.replace(/\D/g, '') || `nombre:${nombre.toLowerCase()}`);
   cancelarEdicionTaller();
   await cargarTaller();
 }
@@ -6514,6 +6525,7 @@ function editarOrdenTaller(numero) {
   if (!o) return;
   editingTallerId = numero;
 
+  document.getElementById('t-fecha').value = o.createdAt ? new Date(o.createdAt).toISOString().split('T')[0] : '';
   document.getElementById('t-cliente-nombre').value    = o.cliente?.nombre || '';
   document.getElementById('t-cliente-telefono').value  = o.cliente?.telefono || '';
   document.getElementById('t-bici-modelo').value       = o.bici?.modelo || '';
@@ -6540,6 +6552,7 @@ function cancelarEdicionTaller() {
   ['t-cliente-nombre', 't-cliente-telefono', 't-bici-modelo', 't-bici-color', 't-bici-detalles', 't-notas-servicio']
     .forEach(id => { document.getElementById(id).value = ''; });
   document.getElementById('t-estado').value = 'ingresado';
+  document.getElementById('t-fecha').value = new Date().toISOString().split('T')[0];
 
   currentTallerFotosIngreso     = [];
   currentTallerFotosPresupuesto = [];
@@ -6561,12 +6574,44 @@ async function eliminarOrdenTaller(numero) {
   await cargarTaller();
 }
 
+// Una sola orden, renderizada dentro de la solapa de su cliente
+function renderOrdenTallerItem(o) {
+  const est   = TALLER_ESTADOS[o.estado] || TALLER_ESTADOS.ingresado;
+  const thumb = o.fotosIngreso?.[0];
+  const fecha = o.createdAt ? new Date(o.createdAt).toLocaleDateString('es-AR') : '—';
+
+  return `
+    <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 16px;border-top:1px solid var(--border)">
+      ${thumb
+        ? `<img src="${thumb}" style="width:56px;height:56px;object-fit:cover;border-radius:6px;flex-shrink:0">`
+        : `<div style="width:56px;height:56px;border-radius:6px;background:var(--dark);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">🚲</div>`}
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+          <span style="font-family:var(--font-display);font-size:0.65rem;letter-spacing:2px;color:var(--cyan)">${o.numero}</span>
+          <span style="font-family:var(--font-display);font-size:0.55rem;font-weight:700;letter-spacing:1px;color:${est.color}">${est.label}</span>
+        </div>
+        <div style="font-size:0.7rem;color:var(--muted);margin-top:4px">📅 ${fecha}</div>
+        <div style="font-size:0.8rem;color:var(--muted);margin-top:4px">🚲 ${o.bici?.modelo || ''}${o.bici?.color ? ` (${o.bici.color})` : ''}</div>
+        ${o.bici?.detalles ? `<div style="font-size:0.75rem;color:var(--muted);margin-top:2px">${o.bici.detalles}</div>` : ''}
+        ${o.notasServicio ? `<div style="font-size:0.75rem;color:var(--muted);margin-top:4px">📝 ${o.notasServicio}</div>` : ''}
+        ${(o.fotosIngreso?.length || o.fotosPresupuesto?.length) ? `<div style="font-size:0.7rem;color:var(--muted);margin-top:4px">📷 ${o.fotosIngreso?.length || 0} foto(s) de ingreso · 🧾 ${o.fotosPresupuesto?.length || 0} de presupuesto</div>` : ''}
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button onclick="editarOrdenTaller('${o.numero}')" style="background:none;border:1px solid var(--border);color:var(--cyan);padding:5px 12px;border-radius:4px;font-family:var(--font-display);font-size:0.55rem;letter-spacing:1px;cursor:pointer">✏ EDITAR</button>
+          <button onclick="eliminarOrdenTaller('${o.numero}')" style="background:none;border:1px solid rgba(244,67,54,0.3);color:#f44336;padding:5px 12px;border-radius:4px;font-family:var(--font-display);font-size:0.55rem;letter-spacing:1px;cursor:pointer">✕ ELIMINAR</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+// Recuerda qué solapas de cliente quedaron abiertas entre renders (ej: al buscar)
+const tallerGruposAbiertos = new Set();
+
 function renderTallerListView() {
   const el = document.getElementById('taller-list');
   if (!el) return;
   const q = (document.getElementById('taller-search')?.value || '').toLowerCase().trim();
 
-  let list = [...tallerOrdenes].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  let list = [...tallerOrdenes];
   if (q) {
     list = list.filter(o =>
       (o.numero || '').toLowerCase().includes(q) ||
@@ -6580,34 +6625,47 @@ function renderTallerListView() {
     return;
   }
 
-  el.innerHTML = list.map(o => {
-    const est   = TALLER_ESTADOS[o.estado] || TALLER_ESTADOS.ingresado;
-    const thumb = o.fotosIngreso?.[0];
-    const fecha = o.createdAt ? new Date(o.createdAt).toLocaleString('es-AR') : '—';
+  // Agrupar por cliente: el teléfono normalizado es la clave (más confiable que el
+  // nombre, que puede repetirse o escribirse distinto); si no hay teléfono, se
+  // agrupa por nombre.
+  const grupos = {};
+  list.forEach(o => {
+    const telLimpio = (o.cliente?.telefono || '').replace(/\D/g, '');
+    const key = telLimpio || `nombre:${(o.cliente?.nombre || 'sin datos').toLowerCase()}`;
+    if (!grupos[key]) grupos[key] = { nombre: o.cliente?.nombre || 'Sin nombre', telefono: o.cliente?.telefono || '', ordenes: [] };
+    grupos[key].ordenes.push(o);
+  });
 
+  const gruposArr = Object.entries(grupos).map(([key, g]) => {
+    g.ordenes.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    return { key, ...g };
+  }).sort((a, b) => new Date(b.ordenes[0].createdAt) - new Date(a.ordenes[0].createdAt));
+
+  // Si hay búsqueda activa y solo queda un cliente en pantalla, conviene abrirlo solo
+  if (q && gruposArr.length === 1) tallerGruposAbiertos.add(gruposArr[0].key);
+
+  el.innerHTML = gruposArr.map(g => {
+    const abierto     = tallerGruposAbiertos.has(g.key);
+    const ultimaFecha = g.ordenes[0].createdAt ? new Date(g.ordenes[0].createdAt).toLocaleDateString('es-AR') : '—';
+    const keyAttr     = g.key.replace(/"/g, '&quot;');
     return `
-      <div class="admin-item" style="align-items:flex-start;gap:14px">
-        ${thumb
-          ? `<img src="${thumb}" style="width:56px;height:56px;object-fit:cover;border-radius:6px;flex-shrink:0">`
-          : `<div style="width:56px;height:56px;border-radius:6px;background:var(--dark);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">🚲</div>`}
-        <div style="flex:1;min-width:0">
-          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-            <span style="font-family:var(--font-display);font-size:0.65rem;letter-spacing:2px;color:var(--cyan)">${o.numero}</span>
-            <span style="font-family:var(--font-display);font-size:0.55rem;font-weight:700;letter-spacing:1px;color:${est.color}">${est.label}</span>
+      <div class="admin-item" style="flex-direction:column;align-items:stretch;padding:0;overflow:hidden">
+        <div onclick="toggleClienteTaller(&quot;${keyAttr}&quot;)" style="cursor:pointer;padding:16px;display:flex;justify-content:space-between;align-items:center;gap:10px">
+          <div>
+            <div style="font-size:0.9rem;color:var(--text);font-weight:600">👤 ${g.nombre}</div>
+            <div style="font-size:0.75rem;color:var(--muted);margin-top:2px">${g.telefono ? `📞 ${g.telefono} · ` : ''}${g.ordenes.length} orden${g.ordenes.length > 1 ? 'es' : ''} · última: ${ultimaFecha}</div>
           </div>
-          <div style="font-size:0.85rem;color:var(--text);margin-top:4px">👤 ${o.cliente?.nombre || ''} ${o.cliente?.telefono ? `— 📞 ${o.cliente.telefono}` : ''}</div>
-          <div style="font-size:0.8rem;color:var(--muted);margin-top:2px">🚲 ${o.bici?.modelo || ''}${o.bici?.color ? ` (${o.bici.color})` : ''}</div>
-          ${o.bici?.detalles ? `<div style="font-size:0.75rem;color:var(--muted);margin-top:2px">${o.bici.detalles}</div>` : ''}
-          ${o.notasServicio ? `<div style="font-size:0.75rem;color:var(--muted);margin-top:4px">📝 ${o.notasServicio}</div>` : ''}
-          ${(o.fotosIngreso?.length || o.fotosPresupuesto?.length) ? `<div style="font-size:0.7rem;color:var(--muted);margin-top:4px">📷 ${o.fotosIngreso?.length || 0} foto(s) de ingreso · 🧾 ${o.fotosPresupuesto?.length || 0} de presupuesto</div>` : ''}
-          <div style="font-size:0.7rem;color:var(--muted);margin-top:4px">${fecha}</div>
-          <div style="display:flex;gap:8px;margin-top:8px">
-            <button onclick="editarOrdenTaller('${o.numero}')" style="background:none;border:1px solid var(--border);color:var(--cyan);padding:5px 12px;border-radius:4px;font-family:var(--font-display);font-size:0.55rem;letter-spacing:1px;cursor:pointer">✏ EDITAR</button>
-            <button onclick="eliminarOrdenTaller('${o.numero}')" style="background:none;border:1px solid rgba(244,67,54,0.3);color:#f44336;padding:5px 12px;border-radius:4px;font-family:var(--font-display);font-size:0.55rem;letter-spacing:1px;cursor:pointer">✕ ELIMINAR</button>
-          </div>
+          <span style="color:var(--cyan);font-family:var(--font-display);font-size:0.8rem;flex-shrink:0">${abierto ? '▲' : '▼'}</span>
         </div>
+        ${abierto ? g.ordenes.map(o => renderOrdenTallerItem(o)).join('') : ''}
       </div>`;
   }).join('');
+}
+
+function toggleClienteTaller(key) {
+  if (tallerGruposAbiertos.has(key)) tallerGruposAbiertos.delete(key);
+  else tallerGruposAbiertos.add(key);
+  renderTallerListView();
 }
 
 // ─── CONFIG MODAL (ya no es necesario — credenciales van en Netlify) ───
