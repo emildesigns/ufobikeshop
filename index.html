@@ -2043,7 +2043,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <li><a href="/?page=about" onclick="showPage('about');return false;" id="nav-about">Nosotros</a></li>
     <li><a href="/?page=service" onclick="showPage('service');return false;" id="nav-service">Servicio Técnico</a></li>
     <li><a onclick="showPage('help')" id="nav-help">Ayuda</a></li>
-    <li><a onclick="showPage('admin')" id="nav-admin">Admin</a></li>
+    <li id="nav-admin-li" style="display:none"><a onclick="showPage('admin')" id="nav-admin">Admin</a></li>
   </ul>
   <div style="display:flex;gap:10px;align-items:center">
     <button class="cart-btn" id="cart-btn" onclick="toggleCart()" aria-label="Abrir carrito de compras">
@@ -2074,7 +2074,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <a href="/?page=service" onclick="showPage('service');toggleMobileMenu();return false;" style="padding:16px 28px;color:var(--muted);font-family:var(--font-display);font-size:0.65rem;letter-spacing:2px;text-decoration:none;border-bottom:1px solid var(--border);cursor:auto">🔧 SERVICIO TÉCNICO</a>
   <a href="/?page=about" onclick="showPage('about');toggleMobileMenu();return false;" style="padding:16px 28px;color:var(--muted);font-family:var(--font-display);font-size:0.65rem;letter-spacing:2px;text-decoration:none;border-bottom:1px solid var(--border);cursor:auto">👽 NOSOTROS</a>
   <a onclick="showPage('help');toggleMobileMenu()" style="padding:16px 28px;color:var(--muted);font-family:var(--font-display);font-size:0.65rem;letter-spacing:2px;text-decoration:none;border-bottom:1px solid var(--border);cursor:auto">❓ AYUDA</a>
-  <a onclick="showPage('admin');toggleMobileMenu()" style="padding:16px 28px;color:var(--muted);font-family:var(--font-display);font-size:0.65rem;letter-spacing:2px;text-decoration:none;border-bottom:1px solid var(--border);cursor:auto">⚙️ ADMIN</a>
+  <a id="mobile-nav-admin" onclick="showPage('admin');toggleMobileMenu()" style="display:none;padding:16px 28px;color:var(--muted);font-family:var(--font-display);font-size:0.65rem;letter-spacing:2px;text-decoration:none;border-bottom:1px solid var(--border);cursor:auto">⚙️ ADMIN</a>
 </div>
 </nav>
 
@@ -7826,11 +7826,28 @@ async function initFirebaseAuth() {
         document.body.style.overflow = '';
         sessionStorage.setItem('adminLoginAt', Date.now());
         resetInactivityTimer();
+
+        // La solapa "Admin" solo se muestra a quien ya inició sesión como admin
+        const navAdminLi = document.getElementById('nav-admin-li');
+        const mobileNavAdmin = document.getElementById('mobile-nav-admin');
+        if (navAdminLi) navAdminLi.style.display = 'block';
+        if (mobileNavAdmin) mobileNavAdmin.style.display = 'block';
+
+        // Si entró por el link directo (?page=admin) y todavía no está en esa página
+        // (ej: recién inició sesión desde el overlay de login), completar la navegación
+        if (new URLSearchParams(window.location.search).get('page') === 'admin'
+            && !document.getElementById('page-admin')?.classList.contains('active')) {
+          showPage('admin');
+        }
       } else {
         document.getElementById('admin-user-bar').classList.remove('visible');
         currentUser = null;
         clearTimeout(inactivityTimer);
         sessionStorage.removeItem('adminLoginAt');
+        const navAdminLi = document.getElementById('nav-admin-li');
+        const mobileNavAdmin = document.getElementById('mobile-nav-admin');
+        if (navAdminLi) navAdminLi.style.display = 'none';
+        if (mobileNavAdmin) mobileNavAdmin.style.display = 'none';
       }
     });
 
@@ -8171,7 +8188,7 @@ initFirebaseAuth();
   try {
     const params = new URLSearchParams(window.location.search);
     const page = params.get('page');
-    if (page === 'about' || page === 'service') {
+    if (page === 'about' || page === 'service' || page === 'admin') {
       showPage(page);
     }
   } catch (e) {
