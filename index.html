@@ -6595,12 +6595,31 @@ function renderOrdenTallerItem(o) {
         ${o.bici?.detalles ? `<div style="font-size:0.75rem;color:var(--muted);margin-top:2px">${o.bici.detalles}</div>` : ''}
         ${o.notasServicio ? `<div style="font-size:0.75rem;color:var(--muted);margin-top:4px">📝 ${o.notasServicio}</div>` : ''}
         ${(o.fotosIngreso?.length || o.fotosPresupuesto?.length) ? `<div style="font-size:0.7rem;color:var(--muted);margin-top:4px">📷 ${o.fotosIngreso?.length || 0} foto(s) de ingreso · 🧾 ${o.fotosPresupuesto?.length || 0} de presupuesto</div>` : ''}
-        <div style="display:flex;gap:8px;margin-top:8px">
+        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;align-items:center">
+          <select onchange="cambiarEstadoTallerRapido('${o.numero}', this.value)" style="background:var(--dark);border:1px solid ${est.color};color:${est.color};padding:5px 10px;border-radius:4px;font-family:var(--font-display);font-size:0.55rem;letter-spacing:1px;cursor:pointer">
+            ${Object.entries(TALLER_ESTADOS).map(([key, e]) => `<option value="${key}" ${key === o.estado ? 'selected' : ''}>${e.label}</option>`).join('')}
+          </select>
           <button onclick="editarOrdenTaller('${o.numero}')" style="background:none;border:1px solid var(--border);color:var(--cyan);padding:5px 12px;border-radius:4px;font-family:var(--font-display);font-size:0.55rem;letter-spacing:1px;cursor:pointer">✏ EDITAR</button>
           <button onclick="eliminarOrdenTaller('${o.numero}')" style="background:none;border:1px solid rgba(244,67,54,0.3);color:#f44336;padding:5px 12px;border-radius:4px;font-family:var(--font-display);font-size:0.55rem;letter-spacing:1px;cursor:pointer">✕ ELIMINAR</button>
         </div>
       </div>
     </div>`;
+}
+
+// Cambia el estado de una orden al instante desde la lista, sin abrir el formulario
+async function cambiarEstadoTallerRapido(numero, nuevoEstado) {
+  const o = tallerOrdenes.find(x => x.numero === numero);
+  if (!o) return;
+  const result = await fbUpdate(`taller/${numero}`, { estado: nuevoEstado, updatedAt: new Date().toISOString() });
+  if (!result) {
+    showToast('⚠ Error al cambiar el estado');
+    renderTallerListView(); // revertir el <select> al valor real
+    return;
+  }
+  o.estado    = nuevoEstado;
+  o.updatedAt = new Date().toISOString();
+  showToast(`✓ ESTADO: ${(TALLER_ESTADOS[nuevoEstado] || {}).label || nuevoEstado}`);
+  renderTallerListView();
 }
 
 // Recuerda qué solapas de cliente quedaron abiertas entre renders (ej: al buscar)
