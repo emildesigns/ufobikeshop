@@ -6599,11 +6599,44 @@ function renderOrdenTallerItem(o) {
           <select onchange="cambiarEstadoTallerRapido('${o.numero}', this.value)" style="background:var(--dark);border:1px solid ${est.color};color:${est.color};padding:5px 10px;border-radius:4px;font-family:var(--font-display);font-size:0.55rem;letter-spacing:1px;cursor:pointer">
             ${Object.entries(TALLER_ESTADOS).map(([key, e]) => `<option value="${key}" ${key === o.estado ? 'selected' : ''}>${e.label}</option>`).join('')}
           </select>
+          <button onclick="nuevaOrdenParaBici('${o.numero}')" title="Crea una orden nueva reusando cliente y bici" style="background:rgba(76,175,80,0.1);border:1px solid rgba(76,175,80,0.4);color:#4caf50;padding:5px 12px;border-radius:4px;font-family:var(--font-display);font-size:0.55rem;letter-spacing:1px;cursor:pointer">+ AGREGAR ARREGLO</button>
           <button onclick="editarOrdenTaller('${o.numero}')" style="background:none;border:1px solid var(--border);color:var(--cyan);padding:5px 12px;border-radius:4px;font-family:var(--font-display);font-size:0.55rem;letter-spacing:1px;cursor:pointer">✏ EDITAR</button>
           <button onclick="eliminarOrdenTaller('${o.numero}')" style="background:none;border:1px solid rgba(244,67,54,0.3);color:#f44336;padding:5px 12px;border-radius:4px;font-family:var(--font-display);font-size:0.55rem;letter-spacing:1px;cursor:pointer">✕ ELIMINAR</button>
         </div>
       </div>
     </div>`;
+}
+
+// Precarga cliente + bici de una orden existente para registrar un nuevo
+// arreglo (misma bici, mismo cliente) sin volver a tipear todo desde cero.
+function nuevaOrdenParaBici(numero) {
+  const o = tallerOrdenes.find(x => x.numero === numero);
+  if (!o) return;
+
+  editingTallerId = null; // es una orden NUEVA, no una edición de esta
+
+  document.getElementById('t-fecha').value             = new Date().toISOString().split('T')[0];
+  document.getElementById('t-cliente-nombre').value    = o.cliente?.nombre || '';
+  document.getElementById('t-cliente-telefono').value  = o.cliente?.telefono || '';
+  document.getElementById('t-bici-modelo').value       = o.bici?.modelo || '';
+  document.getElementById('t-bici-color').value        = o.bici?.color || '';
+  document.getElementById('t-bici-detalles').value     = '';
+  document.getElementById('t-estado').value             = 'ingresado';
+  document.getElementById('t-notas-servicio').value    = '';
+
+  currentTallerFotosIngreso     = [];
+  currentTallerFotosPresupuesto = [];
+  renderTallerFotosGrid('ingreso');
+  renderTallerFotosGrid('presupuesto');
+
+  document.getElementById('taller-form-mode-tag').textContent = `NUEVA ORDEN — datos de ${o.cliente?.nombre || 'cliente'} precargados`;
+  document.getElementById('taller-submit-label').textContent  = '+ CREAR ORDEN';
+  document.getElementById('taller-cancel-edit-btn').style.display = 'block';
+
+  buscarHistorialCliente();
+  showToast('✓ Cliente y bici precargados — completá el nuevo arreglo');
+  document.getElementById('taller-anchor').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  document.getElementById('t-bici-detalles').focus();
 }
 
 // Cambia el estado de una orden al instante desde la lista, sin abrir el formulario
