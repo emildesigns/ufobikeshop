@@ -2771,7 +2771,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </div>
       <button class="logout-btn" onclick="doLogout()">CERRAR SESIÓN</button>
     </div>
-    <button onclick="document.getElementById('pedidos-recibidos-anchor').scrollIntoView({behavior:'smooth',block:'start'})" style="background:rgba(0,229,255,0.1);border:1px solid rgba(0,229,255,0.4);color:var(--cyan);padding:10px 20px;border-radius:4px;font-family:var(--font-display);font-size:0.6rem;letter-spacing:2px;cursor:pointer;margin-bottom:20px">↓ IR A: PEDIDOS RECIBIDOS</button>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px">
+      <button onclick="document.getElementById('pedidos-recibidos-anchor').scrollIntoView({behavior:'smooth',block:'start'})" style="background:rgba(0,229,255,0.1);border:1px solid rgba(0,229,255,0.4);color:var(--cyan);padding:10px 20px;border-radius:4px;font-family:var(--font-display);font-size:0.6rem;letter-spacing:2px;cursor:pointer">↓ IR A: PEDIDOS RECIBIDOS</button>
+      <button onclick="document.getElementById('taller-anchor').scrollIntoView({behavior:'smooth',block:'start'})" style="background:rgba(0,229,255,0.1);border:1px solid rgba(0,229,255,0.4);color:var(--cyan);padding:10px 20px;border-radius:4px;font-family:var(--font-display);font-size:0.6rem;letter-spacing:2px;cursor:pointer">↓ IR A: GESTIÓN DEL TALLER</button>
+    </div>
     <div class="admin-grid">
       <div class="admin-form" id="admin-form-box">
         <p class="form-title" id="form-mode-tag">AGREGAR PRODUCTO</p>
@@ -2873,6 +2876,72 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <p class="form-title" id="pedidos-recibidos-anchor" style="margin:28px 0 16px;scroll-margin-top:80px">PEDIDOS RECIBIDOS</p>
         <button onclick="renderOrders()" style="background:none;border:1px solid var(--border);color:var(--cyan);padding:8px 18px;border-radius:4px;font-family:var(--font-display);font-size:0.6rem;letter-spacing:2px;margin-bottom:14px">↻ ACTUALIZAR</button>
         <div id="orders-list"><div style="color:var(--muted);font-size:0.8rem">Hacé clic en "Actualizar" para ver los pedidos.</div></div>
+
+        <p class="form-title" id="taller-anchor" style="margin:32px 0 16px;scroll-margin-top:80px">🔧 GESTIÓN DEL TALLER</p>
+
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:24px;margin-bottom:20px">
+          <p class="form-title" id="taller-form-mode-tag" style="margin-bottom:16px">NUEVA ORDEN DE SERVICIO</p>
+
+          <div class="form-group">
+            <label>NOMBRE DEL CLIENTE</label>
+            <input type="text" id="t-cliente-nombre" placeholder="Ej: Juan Pérez">
+          </div>
+          <div class="form-group">
+            <label>TELÉFONO DEL CLIENTE</label>
+            <input type="text" id="t-cliente-telefono" placeholder="Ej: 3813304791" oninput="buscarHistorialCliente()">
+          </div>
+          <div id="t-historial-cliente" style="display:none;background:rgba(0,229,255,0.06);border:1px solid rgba(0,229,255,0.2);border-radius:6px;padding:12px;margin-bottom:18px;font-size:0.8rem;color:var(--text);line-height:1.7"></div>
+
+          <div class="form-group">
+            <label>MARCA / MODELO DE LA BICI</label>
+            <input type="text" id="t-bici-modelo" placeholder="Ej: Trek Marlin 7">
+          </div>
+          <div class="form-group">
+            <label>COLOR</label>
+            <input type="text" id="t-bici-color" placeholder="Ej: Negro/Rojo">
+          </div>
+          <div class="form-group">
+            <label>DETALLES / MOTIVO DE INGRESO</label>
+            <textarea id="t-bici-detalles" rows="3" placeholder="Qué trae el cliente a arreglar, observaciones del estado de la bici..."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>ESTADO</label>
+            <select id="t-estado">
+              <option value="ingresado">Ingresado</option>
+              <option value="diagnostico">En diagnóstico</option>
+              <option value="presupuestado">Presupuestado</option>
+              <option value="reparacion">En reparación</option>
+              <option value="listo">Listo para retirar</option>
+              <option value="entregado">Entregado</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>FOTOS DEL ESTADO DE INGRESO</label>
+            <input type="file" id="t-fotos-ingreso-input" accept="image/*" style="display:none" onchange="handleTallerFotoUpload(this,'ingreso')">
+            <button type="button" onclick="document.getElementById('t-fotos-ingreso-input').click()" style="background:rgba(0,229,255,0.1);border:1px solid rgba(0,229,255,0.4);color:var(--cyan);padding:9px 18px;border-radius:4px;font-family:var(--font-display);font-size:0.6rem;letter-spacing:2px;cursor:pointer">+ SUBIR FOTO</button>
+            <div id="t-fotos-ingreso-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px;margin-top:10px"></div>
+          </div>
+
+          <div class="form-group">
+            <label>FOTOS DE PRESUPUESTO</label>
+            <input type="file" id="t-fotos-presupuesto-input" accept="image/*" style="display:none" onchange="handleTallerFotoUpload(this,'presupuesto')">
+            <button type="button" onclick="document.getElementById('t-fotos-presupuesto-input').click()" style="background:rgba(0,229,255,0.1);border:1px solid rgba(0,229,255,0.4);color:var(--cyan);padding:9px 18px;border-radius:4px;font-family:var(--font-display);font-size:0.6rem;letter-spacing:2px;cursor:pointer">+ SUBIR FOTO</button>
+            <div id="t-fotos-presupuesto-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px;margin-top:10px"></div>
+          </div>
+
+          <div class="form-group">
+            <label>NOTAS DE SERVICE (qué se le hizo a la bici)</label>
+            <textarea id="t-notas-servicio" rows="3" placeholder="Detalle de la reparación realizada..."></textarea>
+          </div>
+
+          <button class="submit-btn" onclick="guardarOrdenTaller()"><span id="taller-submit-label">+ CREAR ORDEN</span></button>
+          <button id="taller-cancel-edit-btn" onclick="cancelarEdicionTaller()" style="display:none;width:100%;margin-top:10px;padding:10px;background:none;border:1px solid var(--border);color:var(--muted);border-radius:4px;font-family:var(--font-display);font-size:0.6rem;letter-spacing:2px;cursor:pointer">✕ CANCELAR EDICIÓN</button>
+        </div>
+
+        <input type="text" id="taller-search" placeholder="🔍  Buscar por cliente, bici o N° de orden..." oninput="renderTallerListView()" style="width:100%;margin-bottom:12px;background:var(--dark);border:1px solid var(--border);color:var(--text);padding:9px 14px;border-radius:4px;font-family:var(--font-body);font-size:0.85rem;outline:none">
+        <div class="admin-list" id="taller-list"><div style="color:var(--muted);font-size:0.8rem">Cargando órdenes de servicio...</div></div>
 
         <p class="form-title" style="margin:32px 0 16px">BACKUP DE PRODUCTOS</p>
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px">
@@ -6312,6 +6381,235 @@ async function renderOrders() {
   }).join('');
 }
 
+// ─── GESTIÓN DEL TALLER ───────────────────────────────────────────────────
+let tallerOrdenes               = [];
+let currentTallerFotosIngreso   = [];
+let currentTallerFotosPresupuesto = [];
+let editingTallerId             = null;
+
+const TALLER_ESTADOS = {
+  ingresado:     { label: 'INGRESADO',         color: '#888899' },
+  diagnostico:   { label: 'EN DIAGNÓSTICO',    color: '#ffd700' },
+  presupuestado: { label: 'PRESUPUESTADO',     color: '#ff9900' },
+  reparacion:    { label: 'EN REPARACIÓN',     color: '#00e5ff' },
+  listo:         { label: 'LISTO PARA RETIRAR', color: '#4caf50' },
+  entregado:     { label: 'ENTREGADO',          color: '#4caf50' },
+};
+
+async function cargarTaller() {
+  const data = await fbGet('taller');
+  tallerOrdenes = data && !data.error ? Object.values(data) : [];
+  renderTallerListView();
+}
+
+function generarNumeroTaller() {
+  let max = 0;
+  tallerOrdenes.forEach(o => {
+    const n = parseInt(String(o.numero || '').replace(/\D/g, ''), 10);
+    if (!isNaN(n) && n > max) max = n;
+  });
+  return `T-${String(max + 1).padStart(3, '0')}`;
+}
+
+// ─── Fotos (ingreso / presupuesto) — mismo mecanismo que las fotos de productos ───
+function renderTallerFotosGrid(tipo) {
+  const arr  = tipo === 'ingreso' ? currentTallerFotosIngreso : currentTallerFotosPresupuesto;
+  const grid = document.getElementById(`t-fotos-${tipo}-grid`);
+  if (!grid) return;
+  grid.innerHTML = arr.map((url, idx) => `
+    <div style="position:relative;aspect-ratio:1;border-radius:6px;overflow:hidden;border:1px solid var(--border)">
+      <img src="${url}" style="width:100%;height:100%;object-fit:cover">
+      <button onclick="removeTallerFoto('${tipo}',${idx})" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.75);border:none;color:#fff;width:20px;height:20px;border-radius:50%;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+    </div>`).join('');
+}
+
+function removeTallerFoto(tipo, idx) {
+  const arr = tipo === 'ingreso' ? currentTallerFotosIngreso : currentTallerFotosPresupuesto;
+  arr.splice(idx, 1);
+  renderTallerFotosGrid(tipo);
+}
+
+function handleTallerFotoUpload(input, tipo) {
+  const file = input.files[0];
+  if (!file) return;
+  const ALLOWED = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+  if (!ALLOWED.includes(file.type)) { showToast('⚠ Solo JPG, PNG o WebP'); input.value = ''; return; }
+  if (file.size > 5 * 1024 * 1024)  { showToast('⚠ La imagen supera 5MB');  input.value = ''; return; }
+  const arr = tipo === 'ingreso' ? currentTallerFotosIngreso : currentTallerFotosPresupuesto;
+  if (arr.length >= 10) { showToast('⚠ Límite de 10 fotos alcanzado'); input.value = ''; return; }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    comprimirImagen(e.target.result, 800, 0.75, async function(b64) {
+      const cloudUrl = await uploadToCloudinary(b64);
+      arr.push(cloudUrl || b64);
+      renderTallerFotosGrid(tipo);
+      showToast(cloudUrl ? '✓ IMAGEN SUBIDA' : '⚠ CLOUDINARY NO RESPONDIÓ — GUARDADA LOCALMENTE');
+    });
+  };
+  reader.readAsDataURL(file);
+  input.value = '';
+}
+
+// ─── Historial del cliente por teléfono ───
+function buscarHistorialCliente() {
+  const box = document.getElementById('t-historial-cliente');
+  const tel = document.getElementById('t-cliente-telefono').value.replace(/\D/g, '');
+  if (!tel || tel.length < 6) { box.style.display = 'none'; return; }
+
+  const otras = tallerOrdenes.filter(o =>
+    (o.cliente?.telefono || '').replace(/\D/g, '') === tel && o.numero !== editingTallerId
+  );
+  if (otras.length === 0) { box.style.display = 'none'; return; }
+
+  box.style.display = 'block';
+  box.innerHTML = `<strong style="color:var(--cyan)">📋 Este cliente ya trajo ${otras.length} bici${otras.length > 1 ? 's' : ''} antes:</strong><br>` +
+    otras
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .map(o => `• ${o.numero} — ${o.createdAt ? new Date(o.createdAt).toLocaleDateString('es-AR') : '—'} — ${o.bici?.modelo || 'bici'} (${(TALLER_ESTADOS[o.estado] || TALLER_ESTADOS.ingresado).label})`)
+      .join('<br>');
+}
+
+// ─── Guardar (crear o editar) orden de servicio ───
+async function guardarOrdenTaller() {
+  const nombre   = document.getElementById('t-cliente-nombre').value.trim();
+  const telefono = document.getElementById('t-cliente-telefono').value.trim();
+  const modelo   = document.getElementById('t-bici-modelo').value.trim();
+  if (!nombre || !telefono || !modelo) {
+    showToast('⚠ Completá cliente, teléfono y bici');
+    return;
+  }
+
+  const numero = editingTallerId || generarNumeroTaller();
+  const existente = editingTallerId ? tallerOrdenes.find(o => o.numero === editingTallerId) : null;
+
+  const data = {
+    numero,
+    createdAt:      existente?.createdAt || new Date().toISOString(),
+    updatedAt:      new Date().toISOString(),
+    estado:         document.getElementById('t-estado').value,
+    cliente: {
+      nombre,
+      telefono,
+    },
+    bici: {
+      modelo,
+      color:    document.getElementById('t-bici-color').value.trim(),
+      detalles: document.getElementById('t-bici-detalles').value.trim(),
+    },
+    fotosIngreso:     [...currentTallerFotosIngreso],
+    fotosPresupuesto: [...currentTallerFotosPresupuesto],
+    notasServicio:    document.getElementById('t-notas-servicio').value.trim(),
+  };
+
+  const result = await fbSet(`taller/${numero}`, data);
+  if (!result) { showToast('⚠ Error al guardar la orden'); return; }
+
+  showToast(editingTallerId ? '✓ ORDEN ACTUALIZADA' : `✓ ORDEN ${numero} CREADA`);
+  cancelarEdicionTaller();
+  await cargarTaller();
+}
+
+function editarOrdenTaller(numero) {
+  const o = tallerOrdenes.find(x => x.numero === numero);
+  if (!o) return;
+  editingTallerId = numero;
+
+  document.getElementById('t-cliente-nombre').value    = o.cliente?.nombre || '';
+  document.getElementById('t-cliente-telefono').value  = o.cliente?.telefono || '';
+  document.getElementById('t-bici-modelo').value       = o.bici?.modelo || '';
+  document.getElementById('t-bici-color').value        = o.bici?.color || '';
+  document.getElementById('t-bici-detalles').value     = o.bici?.detalles || '';
+  document.getElementById('t-estado').value             = o.estado || 'ingresado';
+  document.getElementById('t-notas-servicio').value    = o.notasServicio || '';
+
+  currentTallerFotosIngreso     = [...(o.fotosIngreso || [])];
+  currentTallerFotosPresupuesto = [...(o.fotosPresupuesto || [])];
+  renderTallerFotosGrid('ingreso');
+  renderTallerFotosGrid('presupuesto');
+
+  document.getElementById('taller-form-mode-tag').textContent = `EDITANDO ${numero}`;
+  document.getElementById('taller-submit-label').textContent  = 'GUARDAR CAMBIOS';
+  document.getElementById('taller-cancel-edit-btn').style.display = 'block';
+
+  buscarHistorialCliente();
+  document.getElementById('taller-anchor').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function cancelarEdicionTaller() {
+  editingTallerId = null;
+  ['t-cliente-nombre', 't-cliente-telefono', 't-bici-modelo', 't-bici-color', 't-bici-detalles', 't-notas-servicio']
+    .forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('t-estado').value = 'ingresado';
+
+  currentTallerFotosIngreso     = [];
+  currentTallerFotosPresupuesto = [];
+  renderTallerFotosGrid('ingreso');
+  renderTallerFotosGrid('presupuesto');
+
+  document.getElementById('t-historial-cliente').style.display = 'none';
+  document.getElementById('taller-form-mode-tag').textContent  = 'NUEVA ORDEN DE SERVICIO';
+  document.getElementById('taller-submit-label').textContent   = '+ CREAR ORDEN';
+  document.getElementById('taller-cancel-edit-btn').style.display = 'none';
+}
+
+async function eliminarOrdenTaller(numero) {
+  if (!confirm(`¿Eliminar la orden ${numero}?\n\nEsta acción no se puede deshacer.`)) return;
+  const ok = await fbDelete(`taller/${numero}`);
+  if (!ok) { showToast('⚠ Error al eliminar'); return; }
+  showToast('✓ ORDEN ELIMINADA');
+  if (editingTallerId === numero) cancelarEdicionTaller();
+  await cargarTaller();
+}
+
+function renderTallerListView() {
+  const el = document.getElementById('taller-list');
+  if (!el) return;
+  const q = (document.getElementById('taller-search')?.value || '').toLowerCase().trim();
+
+  let list = [...tallerOrdenes].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  if (q) {
+    list = list.filter(o =>
+      (o.numero || '').toLowerCase().includes(q) ||
+      (o.cliente?.nombre || '').toLowerCase().includes(q) ||
+      (o.bici?.modelo || '').toLowerCase().includes(q)
+    );
+  }
+
+  if (!list.length) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:0.8rem;padding:20px 0">No hay órdenes de servicio.</div>';
+    return;
+  }
+
+  el.innerHTML = list.map(o => {
+    const est   = TALLER_ESTADOS[o.estado] || TALLER_ESTADOS.ingresado;
+    const thumb = o.fotosIngreso?.[0];
+    const fecha = o.createdAt ? new Date(o.createdAt).toLocaleString('es-AR') : '—';
+
+    return `
+      <div class="admin-item" style="align-items:flex-start;gap:14px">
+        ${thumb
+          ? `<img src="${thumb}" style="width:56px;height:56px;object-fit:cover;border-radius:6px;flex-shrink:0">`
+          : `<div style="width:56px;height:56px;border-radius:6px;background:var(--dark);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">🚲</div>`}
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+            <span style="font-family:var(--font-display);font-size:0.65rem;letter-spacing:2px;color:var(--cyan)">${o.numero}</span>
+            <span style="font-family:var(--font-display);font-size:0.55rem;font-weight:700;letter-spacing:1px;color:${est.color}">${est.label}</span>
+          </div>
+          <div style="font-size:0.85rem;color:var(--text);margin-top:4px">👤 ${o.cliente?.nombre || ''} ${o.cliente?.telefono ? `— 📞 ${o.cliente.telefono}` : ''}</div>
+          <div style="font-size:0.8rem;color:var(--muted);margin-top:2px">🚲 ${o.bici?.modelo || ''}${o.bici?.color ? ` (${o.bici.color})` : ''}</div>
+          ${o.bici?.detalles ? `<div style="font-size:0.75rem;color:var(--muted);margin-top:2px">${o.bici.detalles}</div>` : ''}
+          ${o.notasServicio ? `<div style="font-size:0.75rem;color:var(--muted);margin-top:4px">📝 ${o.notasServicio}</div>` : ''}
+          ${(o.fotosIngreso?.length || o.fotosPresupuesto?.length) ? `<div style="font-size:0.7rem;color:var(--muted);margin-top:4px">📷 ${o.fotosIngreso?.length || 0} foto(s) de ingreso · 🧾 ${o.fotosPresupuesto?.length || 0} de presupuesto</div>` : ''}
+          <div style="font-size:0.7rem;color:var(--muted);margin-top:4px">${fecha}</div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button onclick="editarOrdenTaller('${o.numero}')" style="background:none;border:1px solid var(--border);color:var(--cyan);padding:5px 12px;border-radius:4px;font-family:var(--font-display);font-size:0.55rem;letter-spacing:1px;cursor:pointer">✏ EDITAR</button>
+            <button onclick="eliminarOrdenTaller('${o.numero}')" style="background:none;border:1px solid rgba(244,67,54,0.3);color:#f44336;padding:5px 12px;border-radius:4px;font-family:var(--font-display);font-size:0.55rem;letter-spacing:1px;cursor:pointer">✕ ELIMINAR</button>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
 // ─── CONFIG MODAL (ya no es necesario — credenciales van en Netlify) ───
 async function eliminarPedido(orderId) {
   if (!confirm(`¿Estás seguro que deseas eliminar la orden ${orderId}?\n\nEsta acción no se puede deshacer.`)) return;
@@ -7276,7 +7574,7 @@ function showPage(name) {
   if (navEl) navEl.classList.add('active');
   window.scrollTo(0, 0);
   if (name === 'shop') renderProducts();
-  if (name === 'admin') { renderAdminList(); renderOrders(); renderBannerAdmin(); actualizarStatsMigracion(); }
+  if (name === 'admin') { renderAdminList(); renderOrders(); cargarTaller(); renderBannerAdmin(); actualizarStatsMigracion(); }
   if (name === 'home') resumeHeroFlashCycle(); else pauseHeroFlashCycle();
 
   // SEO dinámico: Nosotros y Servicio Técnico tienen title/description propios
@@ -7309,7 +7607,7 @@ window.addEventListener('popstate', e => {
   if (navEl) navEl.classList.add('active');
   window.scrollTo(0, 0);
   if (target === 'shop') renderProducts();
-  if (target === 'admin' && currentUser) { renderAdminList(); renderOrders(); actualizarStatsMigracion(); renderGalleryAdmin(); }
+  if (target === 'admin' && currentUser) { renderAdminList(); renderOrders(); cargarTaller(); actualizarStatsMigracion(); renderGalleryAdmin(); }
   if (target === 'home') resumeHeroFlashCycle(); else pauseHeroFlashCycle();
 
   if (target === 'about' || target === 'service') {
