@@ -6697,12 +6697,12 @@ function renderTallerListView() {
   // Si hay búsqueda activa y solo queda un cliente en pantalla, conviene abrirlo solo
   if (q && gruposArr.length === 1) tallerGruposAbiertos.add(gruposArr[0].key);
 
-  el.innerHTML = gruposArr.map(g => {
+  el.innerHTML = gruposArr.map((g, gi) => {
     const abierto     = tallerGruposAbiertos.has(g.key);
     const ultimaFecha = g.ordenes[0].createdAt ? new Date(g.ordenes[0].createdAt).toLocaleDateString('es-AR') : '—';
     const keyAttr     = g.key.replace(/"/g, '&quot;');
     return `
-      <div class="admin-item" style="flex-direction:column;align-items:stretch;padding:0;overflow:hidden">
+      <div id="taller-grupo-${gi}" class="admin-item" style="flex-direction:column;align-items:stretch;padding:0;overflow:hidden;scroll-margin-top:80px">
         <div onclick="toggleClienteTaller(&quot;${keyAttr}&quot;)" style="cursor:pointer;padding:16px;display:flex;justify-content:space-between;align-items:center;gap:10px">
           <div>
             <div style="font-size:0.9rem;color:var(--text);font-weight:600">👤 ${g.nombre}</div>
@@ -6713,6 +6713,11 @@ function renderTallerListView() {
         ${abierto ? g.ordenes.map(o => renderOrdenTallerItem(o)).join('') : ''}
       </div>`;
   }).join('');
+
+  // Búsqueda que apunta a un solo cliente: llevarlo a la vista, ya abierto
+  if (q && gruposArr.length === 1) {
+    document.getElementById('taller-grupo-0')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 }
 
 function toggleClienteTaller(key) {
