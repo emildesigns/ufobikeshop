@@ -2773,7 +2773,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px">
       <button onclick="document.getElementById('pedidos-recibidos-anchor').scrollIntoView({behavior:'smooth',block:'start'})" style="background:rgba(0,229,255,0.1);border:1px solid rgba(0,229,255,0.4);color:var(--cyan);padding:10px 20px;border-radius:4px;font-family:var(--font-display);font-size:0.6rem;letter-spacing:2px;cursor:pointer">↓ IR A: PEDIDOS RECIBIDOS</button>
-      <button onclick="document.getElementById('taller-anchor').scrollIntoView({behavior:'smooth',block:'start'})" style="background:rgba(0,229,255,0.1);border:1px solid rgba(0,229,255,0.4);color:var(--cyan);padding:10px 20px;border-radius:4px;font-family:var(--font-display);font-size:0.6rem;letter-spacing:2px;cursor:pointer">↓ IR A: GESTIÓN DEL TALLER</button>
+      <button onclick="document.getElementById('taller-search').scrollIntoView({behavior:'smooth',block:'start'})" style="background:rgba(0,229,255,0.1);border:1px solid rgba(0,229,255,0.4);color:var(--cyan);padding:10px 20px;border-radius:4px;font-family:var(--font-display);font-size:0.6rem;letter-spacing:2px;cursor:pointer">↓ IR A: GESTIÓN DEL TALLER</button>
     </div>
     <div class="admin-grid">
       <div class="admin-form" id="admin-form-box">
@@ -2877,9 +2877,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <button onclick="renderOrders()" style="background:none;border:1px solid var(--border);color:var(--cyan);padding:8px 18px;border-radius:4px;font-family:var(--font-display);font-size:0.6rem;letter-spacing:2px;margin-bottom:14px">↻ ACTUALIZAR</button>
         <div id="orders-list"><div style="color:var(--muted);font-size:0.8rem">Hacé clic en "Actualizar" para ver los pedidos.</div></div>
 
-        <p class="form-title" id="taller-anchor" style="margin:32px 0 16px;scroll-margin-top:80px">🔧 GESTIÓN DEL TALLER</p>
+        <p class="form-title" style="margin:32px 0 16px">🔧 GESTIÓN DEL TALLER</p>
 
-        <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:24px;margin-bottom:20px">
+        <input type="text" id="taller-search" placeholder="🔍  BUSCAR POR CLIENTE, BICI O N° DE ORDEN..." oninput="renderTallerListView()" style="width:100%;margin-bottom:24px;background:rgba(0,229,255,0.06);border:2px solid var(--cyan);color:var(--text);padding:18px 22px;border-radius:8px;font-family:var(--font-display);font-size:0.85rem;letter-spacing:1px;outline:none;box-shadow:0 0 24px rgba(0,229,255,0.15);scroll-margin-top:80px">
+
+        <div id="taller-form-anchor" style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:24px;margin-bottom:20px;scroll-margin-top:80px">
           <p class="form-title" id="taller-form-mode-tag" style="margin-bottom:16px">NUEVA ORDEN DE SERVICIO</p>
 
           <div class="form-group">
@@ -2944,7 +2946,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           <button id="taller-cancel-edit-btn" onclick="cancelarEdicionTaller()" style="display:none;width:100%;margin-top:10px;padding:10px;background:none;border:1px solid var(--border);color:var(--muted);border-radius:4px;font-family:var(--font-display);font-size:0.6rem;letter-spacing:2px;cursor:pointer">✕ CANCELAR EDICIÓN</button>
         </div>
 
-        <input type="text" id="taller-search" placeholder="🔍  Buscar por cliente, bici o N° de orden..." oninput="renderTallerListView()" style="width:100%;margin-bottom:12px;background:var(--dark);border:1px solid var(--border);color:var(--text);padding:9px 14px;border-radius:4px;font-family:var(--font-body);font-size:0.85rem;outline:none">
         <div class="admin-list" id="taller-list"><div style="color:var(--muted);font-size:0.8rem">Cargando órdenes de servicio...</div></div>
 
         <p class="form-title" style="margin:32px 0 16px">BACKUP DE PRODUCTOS</p>
@@ -6544,7 +6545,7 @@ function editarOrdenTaller(numero) {
   document.getElementById('taller-cancel-edit-btn').style.display = 'block';
 
   buscarHistorialCliente();
-  document.getElementById('taller-anchor').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  document.getElementById('taller-form-anchor').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function cancelarEdicionTaller() {
@@ -6635,7 +6636,7 @@ function nuevaOrdenParaBici(numero) {
 
   buscarHistorialCliente();
   showToast('✓ Cliente y bici precargados — completá el nuevo arreglo');
-  document.getElementById('taller-anchor').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  document.getElementById('taller-form-anchor').scrollIntoView({ behavior: 'smooth', block: 'start' });
   document.getElementById('t-bici-detalles').focus();
 }
 
