@@ -5796,6 +5796,36 @@ async function fbUpdate(path, data) {
     return json;
   } catch(e) { console.error('fbUpdate error:', e); return null; }
 }
+// ─── Variantes públicas (SIN requerir admin logueado) ───
+// Usadas por el checkout de clientes: comprar no debe depender de que haya
+// una sesión de admin activa en el navegador. La seguridad la dan las reglas
+// de Firebase, no currentUser (eso es solo para las acciones del panel admin).
+async function fbSetPublic(path, data) {
+  try {
+    const url = await authUrl(path);
+    const res = await fetch(url, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) { console.error(`fbSetPublic ${res.status} en "${path}"`); return null; }
+    const json = await res.json();
+    if (!fbRespOk(json)) return null;
+    return json;
+  } catch(e) { console.error('fbSetPublic error:', e); return null; }
+}
+async function fbUpdatePublic(path, data) {
+  try {
+    const url = await authUrl(path);
+    const res = await fetch(url, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) { console.error(`fbUpdatePublic ${res.status} en "${path}"`); return null; }
+    const json = await res.json();
+    if (!fbRespOk(json)) return null;
+    return json;
+  } catch(e) { console.error('fbUpdatePublic error:', e); return null; }
+}
 async function fbDelete(path) {
   try {
     if (!currentUser) { console.error('fbDelete: sin usuario autenticado'); return null; }
@@ -6081,13 +6111,19 @@ function generarSchemaProductos() {
 }
 
 // ─── PEDIDOS: GUARDAR Y LEER ───
+// Público a propósito: lo dispara un cliente comprando, que nunca tiene
+// sesión de admin activa. Ver fbSetPublic más arriba.
 async function saveOrderToFirebase(orderData) {
-  return await fbSet(`orders/${orderData.orderId}`, orderData);
+  return await fbSetPublic(`orders/${orderData.orderId}`, orderData);
 }
 async function loadOrdersFromFirebase() {
   const data = await fbGet('orders');
   if (!data || data.error) return [];
-  return Object.values(data).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  // orderId como respaldo = la clave real de Firebase, por si el registro quedó
+  // incompleto (ej: un PATCH que crea el nodo desde cero) y no trae el campo.
+  return Object.entries(data)
+    .map(([key, o]) => ({ ...o, orderId: o.orderId || key }))
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
 
 // ─── STOCK: DESCONTAR AL VENDER ───
@@ -6637,7 +6673,13 @@ async function confirmarTransferencia() {
       createdAt:     new Date().toISOString(),
     };
 
-    await saveOrderToFirebase(orderData);
+    const saved = await saveOrderToFirebase(orderData);
+    if (!saved) {
+      document.getElementById('transfer-confirm-btn').style.display = 'block';
+      document.getElementById('transfer-loading').style.display = 'none';
+      showToast('⚠ No se pudo registrar el pedido. Probá de nuevo o consultá por WhatsApp.');
+      return;
+    }
 
     // Enviar email de notificación
     try {
@@ -6664,7 +6706,7 @@ async function confirmarTransferencia() {
       });
       const emailData = await emailRes.json();
       if (emailData.ok) {
-        await fbUpdate(`orders/${orderId}`, { emailEnviado: true });
+        await fbUpdatePublic(`orders/${orderId}`, { emailEnviado: true });
       }
     } catch(e) {}
 
@@ -6746,7 +6788,8 @@ async function goToMP() {
       paymentStatus: 'pending',
       createdAt:     new Date().toISOString(),
     };
-    await saveOrderToFirebase(orderData);
+    const saved = await saveOrderToFirebase(orderData);
+    if (!saved) throw new Error('No se pudo registrar el pedido. Probá de nuevo.');
 
     // ── 2. Armar items para MP incluyendo envío (con recargo 15%) ──
     // Importante: NO modificar el carrito original — crear objetos nuevos
@@ -6780,7 +6823,7 @@ async function goToMP() {
     const data = await res.json();
 
     // ── 3. Guardar preferenceId en Firebase ──
-    await fbUpdate(`orders/${orderId}`, { preferenceId: data.preferenceId });
+    await fbUpdatePublic(`orders/${orderId}`, { preferenceId: data.preferenceId });
 
     // ── 4. Redirigir al checkout de MercadoPago ──
     window.location.href = data.checkoutUrl;
@@ -6795,7 +6838,9 @@ async function goToMP() {
        Verificá que las <strong style="color:var(--cyan)">variables de entorno</strong> estén configuradas en Netlify.`;
     console.error('Checkout error:', err);
     // Limpiar pedido pendiente fallido
-    if (FIREBASE_DB_URL) fbSet(`orders/${Date.now()}_failed`, { error: err.message, cart });
+    // Ruta separada de "orders/" a propósito: esto no es un pedido real, es un
+    // log de diagnóstico — mezclarlo en orders/ ensucia el panel de admin.
+    if (FIREBASE_DB_URL) fbSetPublic(`failed_checkouts/${Date.now()}`, { error: err.message, cart });
   }
 }
 
