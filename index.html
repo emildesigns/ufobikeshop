@@ -3041,6 +3041,17 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <span class="ship-price">GRATIS</span>
     </div>
 
+    <!-- Envío por Uber — siempre visible, costo lo coordina y paga el comprador aparte -->
+    <div class="shipping-option" id="uber-option" style="margin-bottom:10px">
+      <input type="radio" name="shipping" id="ship-uber-fixed" value="uber"
+        onchange="selectShipping('uber','Envío por Uber — zona Tucumán',0)">
+      <label for="ship-uber-fixed">
+        <div>🛵 Envío por Uber — zona Tucumán</div>
+        <div style="font-size:0.72rem;color:var(--muted)">Coordiná el viaje por WhatsApp · Costo a cargo del comprador</div>
+      </label>
+      <span class="ship-price" style="font-size:0.62rem">A CARGO DEL COMPRADOR</span>
+    </div>
+
     <div style="font-size:0.65rem;color:var(--muted);margin-bottom:8px;letter-spacing:1px">— O CALCULÁ EL ENVÍO A DOMICILIO —</div>
 
     <div class="shipping-input-row">
@@ -3200,8 +3211,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <button class="modal-cancel" onclick="closeTransferModal()" style="flex:1;padding:12px;border-radius:4px;font-family:var(--font-display);font-size:0.65rem;letter-spacing:2px">← VOLVER</button>
       <button class="modal-confirm" onclick="confirmarTransferencia()" id="transfer-confirm-btn" style="flex:1;padding:12px;border-radius:4px;font-family:var(--font-display);font-size:0.65rem;letter-spacing:2px;font-weight:700">CONFIRMAR PEDIDO →</button>
     </div>
-    <div id="transfer-loading" style="display:none;margin-top:16px;color:var(--cyan);font-family:var(--font-display);font-size:0.65rem;letter-spacing:2px">
-      🛸 REGISTRANDO PEDIDO...
+    <div id="transfer-loading" style="display:none;margin-top:16px;color:var(--cyan);font-family:var(--font-display);font-size:0.65rem;letter-spacing:2px;text-align:center">
+      <span style="display:block;font-size:1.8rem;margin-bottom:8px;animation:spinUfo 0.9s linear infinite">🛞</span>
+      REGISTRANDO PEDIDO...
     </div>
   </div>
 </div>
@@ -5676,11 +5688,13 @@ async function calcularEnvio() {
 function selectShipping(id, nombre, precio) {
   shippingCost     = precio;
   shippingSelected = { id, nombre, precio };
-  // Si elige envío a domicilio, deseleccionar retiro fijo
+  // Si elige otra opción, deseleccionar las fijas (retiro / Uber)
   const retiroFixed = document.getElementById('ship-retiro-fixed');
+  const uberFixed    = document.getElementById('ship-uber-fixed');
   if (retiroFixed && id !== 'retiro') retiroFixed.checked = false;
-  // Si elige retiro, limpiar opciones de envío a domicilio
-  if (id === 'retiro') {
+  if (uberFixed && id !== 'uber') uberFixed.checked = false;
+  // Si elige una opción fija (retiro o Uber), limpiar opciones de envío a domicilio calculadas
+  if (id === 'retiro' || id === 'uber') {
     document.getElementById('shipping-options').innerHTML = '';
     document.getElementById('shipping-result').textContent = '';
     document.getElementById('shipping-cp').value = '';
@@ -5697,7 +5711,9 @@ function updateCartTotals() {
   const disp = document.getElementById('shipping-total-display');
   if (shippingSelected) {
     row.style.display   = 'flex';
-    disp.textContent    = shippingCost === 0 ? 'GRATIS' : formatPrice(shippingCost);
+    disp.textContent    = shippingSelected.id === 'uber'
+      ? 'A CARGO DEL COMPRADOR'
+      : (shippingCost === 0 ? 'GRATIS' : formatPrice(shippingCost));
   } else {
     row.style.display = 'none';
   }
@@ -5835,6 +5851,15 @@ async function fbDelete(path) {
     return true; // DELETE devuelve null en Firebase, lo tratamos como éxito
   } catch(e) { console.error('fbDelete error:', e); return null; }
 }
+
+// ─── Evitar que la ruedita del mouse cambie inputs numéricos sin querer ───
+// Al hacer scroll con el cursor sobre un <input type="number"> enfocado, el
+// navegador suma/resta al valor en vez de scrollear la página (precio, stock,
+// etc. del panel admin). Le sacamos el foco apenas empieza el scroll, así el
+// valor queda intacto y la página scrollea normalmente.
+document.addEventListener('wheel', () => {
+  if (document.activeElement?.type === 'number') document.activeElement.blur();
+}, { passive: true });
 
 // ─── PRODUCTOS: SYNC CON FIREBASE ───
 async function syncProductsToFirebase() {
@@ -6252,7 +6277,7 @@ async function renderOrders() {
     // Envío
     let shippingStr = '';
     if (o.shipping) {
-      const precio = o.shippingCost === 0 ? 'GRATIS' : formatPrice(o.shippingCost || 0);
+      const precio = o.shipping.id === 'uber' ? 'A CARGO DEL COMPRADOR' : (o.shippingCost === 0 ? 'GRATIS' : formatPrice(o.shippingCost || 0));
       shippingStr = `<div style="font-size:0.73rem;color:var(--muted);margin-top:2px">
         📦 ${o.shipping.nombre} — ${precio}</div>`;
     }
@@ -6529,6 +6554,8 @@ function openPaymentModal() {
     shippingRow.style.display    = 'block';
     shippingDetail.textContent   = shippingSelected.id === 'retiro'
       ? 'Retiro en local — GRATIS'
+      : shippingSelected.id === 'uber'
+      ? 'Envío por Uber — costo a cargo del comprador'
       : `${shippingSelected.nombre} — ${shippingCost === 0 ? 'GRATIS' : formatPrice(shippingCost)}`;
   } else {
     shippingRow.style.display = 'none';
@@ -6596,6 +6623,8 @@ function openTransferModal() {
     shippingRow.style.display  = 'block';
     shippingDetail.textContent = shippingSelected.id === 'retiro'
       ? 'Retiro en local — GRATIS'
+      : shippingSelected.id === 'uber'
+      ? 'Envío por Uber — costo a cargo del comprador'
       : `${shippingSelected.nombre} — ${shippingCost === 0 ? 'GRATIS' : formatPrice(shippingCost)}`;
   } else {
     shippingRow.style.display = 'none';
