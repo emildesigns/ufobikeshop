@@ -8,6 +8,7 @@
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
   gtag('config', 'G-JJYNNMNL6T');
+  gtag('config', 'AW-18387689335');
 </script>
 <!-- Google Customer Reviews: carga la librería (el render se dispara después, con los datos reales del pedido) -->
 <script src="https://apis.google.com/js/platform.js?onload=renderOptIn" async defer></script>
@@ -218,6 +219,14 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             shipping: order.shippingCost || 0,
             currency: 'ARS',
             items: gaItems,
+          });
+
+          // Conversión de Google Ads (campaña de Búsqueda)
+          gtag('event', 'conversion', {
+            send_to: 'AW-18387689335/Gx7HCK7TheEcEPe-979E',
+            value: order.total || 0,
+            currency: 'ARS',
+            transaction_id: orderId,
           });
         }
 
