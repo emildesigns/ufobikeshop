@@ -7143,7 +7143,7 @@ async function confirmarTransferencia() {
   document.getElementById('transfer-confirm-btn').style.display = 'none';
   document.getElementById('transfer-loading').style.display = 'block';
 
-  const orderId    = `UFO-T-${String(Math.floor(Math.random()*900)+100)}`;
+  const orderId    = `UFO-T-${Date.now().toString().slice(-6)}${Math.floor(Math.random()*90)+10}`;
   const subtotal   = cart.reduce((s, i) => s + i.price * i.qty, 0);
   const grandTotal = subtotal + shippingCost;
 
@@ -7263,7 +7263,7 @@ async function goToMP() {
   document.getElementById('modal-btns').style.display = 'none';
   document.getElementById('mp-loading').style.display = 'block';
 
-  const orderId      = `UFO-${String(Math.floor(Math.random()*900)+100)}`;
+  const orderId      = `UFO-${Date.now().toString().slice(-6)}${Math.floor(Math.random()*90)+10}`;
   const subtotal     = cart.reduce((s, i) => s + i.price * i.qty, 0);
   const subtotalMP   = Math.round(subtotal * 1.15); // 15% recargo MP
   const grandTotal   = subtotalMP + shippingCost;
