@@ -99,13 +99,20 @@ module.exports = async (req, res) => {
 
     // Aviso por WhatsApp al vendedor — no debe frenar la respuesta si falla
     try {
+      // OJO: nunca pegar "$" justo antes de un dígito acá (ej. "$10.000") — CallMeBot
+      // parece usar internamente un String.replace() donde "$1", "$2", etc. se
+      // interpretan como grupos de captura y desaparecen del mensaje. Se usa
+      // "ARS " (con espacio) en vez de "$" para evitar el patrón por completo.
+      const itemsListWa = (items || [])
+        .map(i => `• ${i.name} x${i.qty} — ARS ${Number(i.price * i.qty).toLocaleString('es-AR')}`)
+        .join('\n');
       const waText = `🔔 NUEVO PEDIDO — UFO Bike Shop\n` +
         `N°: ${orderId}\n` +
         `Estado: ${estadoPago}\n` +
         `Método: ${esTransferencia ? 'Transferencia Bancaria' : 'MercadoPago'}\n` +
         `Cliente: ${buyer?.name || 'No especificado'}\n` +
-        `Total: $${Number(total).toLocaleString('es-AR')}\n\n` +
-        `Productos:\n${itemsList}`;
+        `Total: ARS ${Number(total).toLocaleString('es-AR')}\n\n` +
+        `Productos:\n${itemsListWa}`;
       await sendWhatsAppNotification(waText);
     } catch (waErr) {
       console.error('CallMeBot error:', waErr.message);
