@@ -108,6 +108,7 @@ module.exports = async (req, res) => {
         .join('\n');
       const waText = `🔔 NUEVO PEDIDO — UFO Bike Shop\n` +
         `N°: ${orderId}\n` +
+        `Fecha: ${fecha}\n` +
         `Estado: ${estadoPago}\n` +
         `Método: ${esTransferencia ? 'Transferencia Bancaria' : 'MercadoPago'}\n` +
         `Cliente: ${buyer?.name || 'No especificado'}\n` +
