@@ -96,12 +96,43 @@ module.exports = async (req, res) => {
     };
 
     const result = await postJSON('api.emailjs.com', '/api/v1.0/email/send', payload);
+
+    // Aviso por WhatsApp al vendedor — no debe frenar la respuesta si falla
+    try {
+      const waText = `🔔 NUEVO PEDIDO — UFO Bike Shop\n` +
+        `N°: ${orderId}\n` +
+        `Estado: ${estadoPago}\n` +
+        `Método: ${esTransferencia ? 'Transferencia Bancaria' : 'MercadoPago'}\n` +
+        `Cliente: ${buyer?.name || 'No especificado'}\n` +
+        `Total: $${Number(total).toLocaleString('es-AR')}\n\n` +
+        `Productos:\n${itemsList}`;
+      await sendWhatsAppNotification(waText);
+    } catch (waErr) {
+      console.error('CallMeBot error:', waErr.message);
+    }
+
     return res.status(200).json({ ok: true, emailjs: result });
 
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
 };
+
+// ─── Aviso de nuevo pedido por WhatsApp (CallMeBot) ───
+function sendWhatsAppNotification(text) {
+  return new Promise((resolve) => {
+    const phone  = process.env.CALLMEBOT_PHONE;
+    const apikey = process.env.CALLMEBOT_APIKEY;
+    if (!phone || !apikey) { resolve(null); return; }
+
+    const url = `https://api.callmebot.com/whatsapp.php?phone=${encodeURIComponent(phone)}&text=${encodeURIComponent(text)}&apikey=${encodeURIComponent(apikey)}`;
+    https.get(url, r => {
+      let raw = '';
+      r.on('data', c => raw += c);
+      r.on('end', () => resolve(raw));
+    }).on('error', () => resolve(null));
+  });
+}
 
 function postJSON(host, path, body) {
   return new Promise((resolve, reject) => {
