@@ -2949,6 +2949,16 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
         <div class="admin-list" id="taller-list"><div style="color:var(--muted);font-size:0.8rem">Cargando órdenes de servicio...</div></div>
 
+        <p class="form-title" style="margin:32px 0 16px">BACKUP DEL TALLER</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+          <button onclick="exportarTaller()" style="background:rgba(0,229,255,0.1);border:1px solid rgba(0,229,255,0.4);color:var(--cyan);padding:10px 20px;border-radius:4px;font-family:var(--font-display);font-size:0.6rem;letter-spacing:2px;cursor:pointer">⬇ EXPORTAR JSON</button>
+          <button onclick="document.getElementById('import-taller-backup-input').click()" style="background:rgba(255,193,7,0.08);border:1px solid rgba(255,193,7,0.3);color:#ffc107;padding:10px 20px;border-radius:4px;font-family:var(--font-display);font-size:0.6rem;letter-spacing:2px;cursor:pointer">⬆ RESTAURAR BACKUP</button>
+          <input type="file" id="import-taller-backup-input" accept=".json" style="display:none" onchange="importarTaller(this)">
+        </div>
+        <div style="font-size:0.7rem;color:var(--muted);line-height:1.6;margin-bottom:8px">
+          Exportá el JSON periódicamente y guardalo en tu computadora — incluye todas las órdenes de servicio con los datos de clientes, bicis y fotos. Si algo sale mal, podés restaurar todo desde ese archivo.
+        </div>
+
         <p class="form-title" style="margin:32px 0 16px">BACKUP DE PRODUCTOS</p>
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px">
           <button onclick="exportarProductos()" style="background:rgba(0,229,255,0.1);border:1px solid rgba(0,229,255,0.4);color:var(--cyan);padding:10px 20px;border-radius:4px;font-family:var(--font-display);font-size:0.6rem;letter-spacing:2px;cursor:pointer">⬇ EXPORTAR JSON</button>
@@ -4138,6 +4148,66 @@ async function importarProductos(input) {
 
       input.value = '';
       showToast(`✓ ${total} productos restaurados correctamente`);
+    } catch(e) {
+      showToast('⚠ Error al leer el archivo de backup');
+      input.value = '';
+    }
+  };
+  reader.readAsText(file);
+}
+
+// ─── BACKUP: ÓRDENES DE TALLER ───
+function exportarTaller() {
+  if (!tallerOrdenes.length) { showToast('⚠ No hay órdenes de taller para exportar'); return; }
+
+  const backup = {
+    fecha:   new Date().toISOString(),
+    version: '1.0',
+    total:   tallerOrdenes.length,
+    ordenes: tallerOrdenes,
+  };
+
+  const json  = JSON.stringify(backup, null, 2);
+  const blob  = new Blob([json], { type: 'application/json' });
+  const url   = URL.createObjectURL(blob);
+  const a     = document.createElement('a');
+  const fecha = new Date().toLocaleDateString('es-AR').replace(/\//g, '-');
+  a.href     = url;
+  a.download = `ufo-bikeshop-taller-${fecha}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast(`✓ ${tallerOrdenes.length} órdenes de taller exportadas`);
+}
+
+async function importarTaller(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+
+      if (!data.ordenes || !Array.isArray(data.ordenes)) {
+        showToast('⚠ Archivo inválido — no es un backup de taller de UFO Bike Shop');
+        return;
+      }
+
+      const total = data.ordenes.length;
+      const fecha = data.fecha ? new Date(data.fecha).toLocaleDateString('es-AR') : 'desconocida';
+
+      if (!confirm(`¿Restaurar backup del ${fecha} con ${total} órdenes de taller?\n\nEsto REEMPLAZARÁ todas las órdenes actuales. Esta acción no se puede deshacer.`)) {
+        input.value = '';
+        return;
+      }
+
+      const obj = data.ordenes.reduce((acc, o) => { if (o?.numero) acc[o.numero] = o; return acc; }, {});
+      const result = await fbSet('taller', obj);
+      if (!result) { showToast('⚠ Error al restaurar el backup'); input.value = ''; return; }
+
+      await cargarTaller();
+      input.value = '';
+      showToast(`✓ ${total} órdenes de taller restauradas correctamente`);
     } catch(e) {
       showToast('⚠ Error al leer el archivo de backup');
       input.value = '';
