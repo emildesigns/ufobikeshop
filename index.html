@@ -1392,13 +1392,26 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   .shipping-result.error { color: #ff4455; }
   .shipping-option {
     display: flex; justify-content: space-between; align-items: center;
-    padding: 8px 0; border-bottom: 1px solid rgba(0,229,255,0.06);
-    font-size: 0.82rem; 
+    padding: 8px 10px; margin: 0 -10px; border-bottom: 1px solid rgba(0,229,255,0.06);
+    border-radius: 6px; font-size: 0.82rem;
+    transition: background 0.25s, box-shadow 0.25s;
   }
   .shipping-option:last-child { border-bottom: none; }
   .shipping-option input[type=radio] { accent-color: var(--cyan); margin-right: 8px;  }
   .shipping-option label { flex: 1; color: var(--text);  }
   .shipping-option .ship-price { font-family: var(--font-display); font-size: 0.75rem; color: var(--cyan); }
+  .shipping-option.selected {
+    background: rgba(0,229,255,0.10);
+    animation: shipSelectPulse 1.6s ease-in-out infinite;
+  }
+  .shipping-input-row input.selected {
+    border-color: var(--cyan);
+    animation: shipSelectPulse 1.6s ease-in-out infinite;
+  }
+  @keyframes shipSelectPulse {
+    0%, 100% { box-shadow: 0 0 6px var(--cyan-glow); }
+    50%      { box-shadow: 0 0 18px var(--cyan), 0 0 30px var(--cyan-glow); }
+  }
 
   /* ─── LOGIN ADMIN ─── */
   .login-overlay {
@@ -3150,7 +3163,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div style="font-size:0.68rem;color:var(--muted);margin-bottom:10px;line-height:1.5">Este código postal es exclusivo para el envío por OCA — no aplica a la opción de Uber de arriba.</div>
 
     <div class="shipping-input-row">
-      <input type="text" id="shipping-cp" placeholder="Código postal destino" maxlength="8" inputmode="numeric" pattern="[0-9]*" oninput="this.value=this.value.replace(/\D/g,'')">
+      <input type="text" id="shipping-cp" placeholder="Código postal destino" maxlength="8" inputmode="numeric" pattern="[0-9]*" oninput="this.value=this.value.replace(/\D/g,'')" onfocus="activateCpSelection()">
       <button class="shipping-calc-btn" onclick="calcularEnvio()">CALCULAR</button>
     </div>
     <div class="shipping-result" id="shipping-result"></div>
@@ -5006,13 +5019,15 @@ function resetShipping() {
   shippingCost     = 0;
   shippingSelected = null;
   const cpInput = document.getElementById('shipping-cp');
-  if (cpInput) cpInput.value = '';
+  if (cpInput) { cpInput.value = ''; cpInput.classList.remove('selected'); }
   document.getElementById('shipping-result').textContent = '';
   document.getElementById('shipping-result').className   = 'shipping-result';
   document.getElementById('shipping-options').innerHTML  = '';
   // Deseleccionar retiro fijo
   const retiroFixed = document.getElementById('ship-retiro-fixed');
   if (retiroFixed) retiroFixed.checked = false;
+  document.getElementById('retiro-option')?.classList.remove('selected');
+  document.getElementById('uber-option')?.classList.remove('selected');
   updateCartTotals();
 }
 
@@ -5859,6 +5874,10 @@ function selectShipping(id, nombre, precio) {
   const uberFixed    = document.getElementById('ship-uber-fixed');
   if (retiroFixed && id !== 'retiro') retiroFixed.checked = false;
   if (uberFixed && id !== 'uber') uberFixed.checked = false;
+  // Resaltado cyan de la opción elegida
+  document.getElementById('retiro-option')?.classList.toggle('selected', id === 'retiro');
+  document.getElementById('uber-option')?.classList.toggle('selected', id === 'uber');
+  document.getElementById('shipping-cp')?.classList.remove('selected');
   // Si elige una opción fija (retiro o Uber), limpiar opciones de envío a domicilio calculadas
   if (id === 'retiro' || id === 'uber') {
     document.getElementById('shipping-options').innerHTML = '';
@@ -5866,6 +5885,23 @@ function selectShipping(id, nombre, precio) {
     document.getElementById('shipping-cp').value = '';
   }
   updateCartTotals();
+}
+
+// Al enfocar el campo de código postal, se marca como la opción activa
+// y se deseleccionan retiro/Uber (visual + estado), como pidió el dueño del local
+function activateCpSelection() {
+  const retiroFixed = document.getElementById('ship-retiro-fixed');
+  const uberFixed    = document.getElementById('ship-uber-fixed');
+  if (retiroFixed) retiroFixed.checked = false;
+  if (uberFixed) uberFixed.checked = false;
+  document.getElementById('retiro-option')?.classList.remove('selected');
+  document.getElementById('uber-option')?.classList.remove('selected');
+  document.getElementById('shipping-cp')?.classList.add('selected');
+  if (shippingSelected && (shippingSelected.id === 'retiro' || shippingSelected.id === 'uber')) {
+    shippingCost     = 0;
+    shippingSelected = null;
+    updateCartTotals();
+  }
 }
 
 function updateCartTotals() {
