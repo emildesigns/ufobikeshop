@@ -2405,9 +2405,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="hero-search" style="max-width:100%;margin:0 0 24px 0;animation:none">
       <input type="text" id="shop-search-input" placeholder="¿Qué estás buscando?"
         oninput="shopSearch(this.value)"
-        onkeydown="if(event.key==='Escape'){this.value='';shopSearch('')}"
-        autocomplete="off">
-      <span class="hero-search-icon">🔍</span>
+        onkeydown="if(event.key==='Escape'){this.value='';shopSearch('')} if(event.key==='Enter'){event.preventDefault();confirmShopSearch();}"
+        autocomplete="off"
+        enterkeyhint="search">
+      <span class="hero-search-icon clickable" onclick="confirmShopSearch()" role="button" aria-label="Ver resultados" tabindex="0">🔍</span>
       <div class="search-results-dropdown" id="shop-search-dropdown"></div>
     </div>
     <div class="cat-pills" id="cat-pills">
@@ -3841,6 +3842,20 @@ function shopSearch(query) {
   }).join('');
 
   dropdown.classList.add('open');
+}
+
+// Mismo gatillo que la lupa/Enter de Home (openHeroSearchResults), adaptado a Tienda:
+// acá la grilla ya se filtra en vivo, así que en vez de abrir una pestaña nueva
+// solo confirma la búsqueda (cierra el dropdown y baja a los resultados)
+function confirmShopSearch() {
+  const input = document.getElementById('shop-search-input');
+  const query = input ? input.value.trim() : '';
+  if (!query) return;
+  const dropdown = document.getElementById('shop-search-dropdown');
+  if (dropdown) { dropdown.classList.remove('open'); dropdown.innerHTML = ''; }
+  input.blur();
+  const grid = document.getElementById('product-grid');
+  if (grid) grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function closeShopSearch() {
