@@ -62,6 +62,7 @@ module.exports = async (req, res) => {
     const clean = products.map(p => ({
       id:       p.id,
       name:     p.name,
+      url:      `https://ufobikeshop.com.ar/?producto=${encodeURIComponent(p.id)}`,
       desc:     p.desc || '',
       detail:   p.detail || '',
       category: p.cat || '',
