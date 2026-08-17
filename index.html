@@ -744,7 +744,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     gap: 12px;
     z-index: 900;
     pointer-events: none;
-    animation: ufoBannerFly 20s linear infinite;
+    animation: ufoBannerFly 22s linear 1 forwards;
     will-change: transform, opacity;
   }
   .ufo-banner-emoji {
@@ -754,22 +754,21 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   }
   .ufo-banner-text {
     font-family: var(--font-display);
-    font-size: 0.8rem;
+    font-size: 0.95rem;
     letter-spacing: 2px;
     font-weight: 700;
     color: var(--black);
     background: var(--cyan);
-    padding: 10px 22px;
+    padding: 12px 26px;
     border-radius: 4px;
     white-space: nowrap;
     box-shadow: 0 0 24px rgba(0,229,255,0.55);
   }
   @keyframes ufoBannerFly {
     0%   { transform: translateX(-25vw); opacity: 0; }
-    3%   { opacity: 1; }
-    62%  { transform: translateX(120vw); opacity: 1; }
-    65%  { transform: translateX(135vw); opacity: 0; }
-    100% { transform: translateX(-25vw); opacity: 0; }
+    5%   { opacity: 1; }
+    90%  { transform: translateX(120vw); opacity: 1; }
+    100% { transform: translateX(140vw); opacity: 0; }
   }
   @keyframes ufoBannerBob {
     from { transform: translateY(-4px) rotate(-4deg); }
@@ -1782,7 +1781,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     .carousel-btn { display: none; } /* en mobile se usa swipe, no flechas */
     .ufo-banner-fly { top: 66px; gap: 8px; }
     .ufo-banner-emoji { font-size: 1.8rem; }
-    .ufo-banner-text { font-size: 0.55rem; letter-spacing: 1px; padding: 7px 14px; }
+    .ufo-banner-text { font-size: 0.68rem; letter-spacing: 1px; padding: 8px 16px; }
 
     /* ── PAGES ── */
     .page { padding-top: 60px; }
