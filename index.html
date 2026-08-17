@@ -744,9 +744,8 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     gap: 12px;
     z-index: 900;
     pointer-events: none;
-    animation: ufoBannerFly 20s linear infinite alternate;
-    will-change: transform, opacity, top;
-    transition: top 0.4s ease;
+    animation: ufoBannerFly 20s linear infinite;
+    will-change: transform, opacity;
   }
   .ufo-banner-emoji {
     font-size: 2.4rem;
@@ -755,19 +754,15 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   }
   .ufo-banner-text {
     font-family: var(--font-display);
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     letter-spacing: 2px;
-    font-weight: 900;
+    font-weight: 700;
     color: var(--black);
-    -webkit-text-stroke: 1px #fff;
-    paint-order: stroke fill;
-    text-shadow: 2px 2px 0 rgba(0,0,0,0.25);
     background: var(--cyan);
-    border: 2px solid #fff;
     padding: 10px 22px;
     border-radius: 4px;
     white-space: nowrap;
-    animation: ufoBannerPulse 1.1s ease-in-out infinite alternate;
+    box-shadow: 0 0 24px rgba(0,229,255,0.55);
   }
   @keyframes ufoBannerFly {
     0%   { transform: translateX(-25vw); opacity: 0; }
@@ -779,10 +774,6 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   @keyframes ufoBannerBob {
     from { transform: translateY(-4px) rotate(-4deg); }
     to   { transform: translateY(4px) rotate(4deg); }
-  }
-  @keyframes ufoBannerPulse {
-    from { box-shadow: 0 0 18px rgba(0,229,255,0.5); }
-    to   { box-shadow: 0 0 36px rgba(0,229,255,0.95), 0 0 16px rgba(255,255,255,0.5); }
   }
   .btn-primary {
     background: var(--cyan); color: var(--black);
@@ -2157,22 +2148,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
 <!-- ═══════════ HOME PAGE ═══════════ -->
 <div class="page active" id="page-home">
-  <div class="ufo-banner-fly" id="ufo-banner-fly" aria-hidden="true">
+  <div class="ufo-banner-fly" aria-hidden="true">
     <span class="ufo-banner-emoji">🛸</span>
     <span class="ufo-banner-text">OFERTAS Y PRECIOS BAJÍSIMOS EN MUCHOS DE NUESTROS PRODUCTOS</span>
   </div>
-  <script>
-    (function() {
-      var ufoBanner = document.getElementById('ufo-banner-fly');
-      if (!ufoBanner) return;
-      var isMobile = window.matchMedia('(max-width: 768px)').matches;
-      var minTop = isMobile ? 66 : 90;
-      ufoBanner.addEventListener('animationiteration', function() {
-        var maxTop = Math.max(minTop, window.innerHeight - 140);
-        ufoBanner.style.top = (minTop + Math.random() * (maxTop - minTop)) + 'px';
-      });
-    })();
-  </script>
   <section class="hero">
     <div class="hero-bg">
       <div class="hero-bg-photo" id="hero-bg-photo"></div>
